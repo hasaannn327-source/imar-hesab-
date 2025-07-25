@@ -2,11 +2,7 @@ import React from "react";
 import ImarHesap from "./ImarHesap";
 
 function App() {
-  return (
-    <div>
-      <ImarHesap />
-    </div>
-  );
+  return <ImarHesap />;
 }
 
 export default App;
