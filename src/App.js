@@ -81,7 +81,7 @@ export default function App() {
     const blokGap = 10;
 
     return (
-      <svg width={width} height={height} style={{ border: "1px solid #aaa" }}>
+      <svg width={width} height={height} style={{ border: "1px solid #aaa", borderRadius: 8 }}>
         {[...Array(blokSayisi)].map((_, i) => {
           const x = i * (blokWidth + blokGap) + (egimVar ? i * 10 : 0);
           const y = egimVar ? i * 5 : 20;
@@ -107,77 +107,131 @@ export default function App() {
     );
   };
 
+  // Basit hover efektini state ile yapıyoruz
+  const [btnHover, setBtnHover] = useState(false);
+  const btnStyle = {
+    width: "100%",
+    padding: 14,
+    fontSize: 18,
+    borderRadius: 10,
+    border: "none",
+    backgroundColor: btnHover ? "#0056b3" : "#007bff",
+    color: "white",
+    cursor: "pointer",
+    transition: "background-color 0.3s ease",
+    marginTop: 15,
+  };
+
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 15px",
+    marginBottom: 15,
+    borderRadius: 8,
+    border: "1.8px solid #ccc",
+    fontSize: 16,
+    outline: "none",
+  };
+
+  const labelStyle = {
+    fontWeight: "600",
+    display: "block",
+    marginBottom: 6,
+    color: "#333",
+  };
+
+  const containerStyle = {
+    maxWidth: 450,
+    margin: "40px auto",
+    fontFamily: "'Poppins', sans-serif",
+    backgroundColor: "#f7f9fc",
+    padding: 25,
+    borderRadius: 15,
+    boxShadow: "0 12px 25px rgba(0,0,0,0.12)",
+  };
+
+  const resultsStyle = {
+    marginTop: 30,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: "white",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+  };
+
   return (
-    <div style={{ maxWidth: 400, margin: "20px auto", fontFamily: "Arial, sans-serif" }}>
-      <h2>İmar Hesaplama</h2>
-      <label>
+    <div style={containerStyle}>
+      <h2 style={{ textAlign: "center", color: "#222", marginBottom: 25 }}>
+        İmar Hesaplama
+      </h2>
+
+      <label style={labelStyle}>
         Arsa Alanı (m²):
         <input
           type="number"
           value={arsaM2}
           onChange={(e) => setArsaM2(e.target.value)}
-          style={{ width: "100%", marginBottom: 10 }}
+          style={inputStyle}
+          placeholder="Örnek: 500"
         />
       </label>
-      <label>
+
+      <label style={labelStyle}>
         TAKS:
         <input
           type="number"
           step="0.01"
           value={taks}
           onChange={(e) => setTaks(e.target.value)}
-          style={{ width: "100%", marginBottom: 10 }}
+          style={inputStyle}
+          placeholder="Örnek: 0.40"
         />
       </label>
-      <label>
+
+      <label style={labelStyle}>
         KAKS:
         <input
           type="number"
           step="0.01"
           value={kaks}
           onChange={(e) => setKaks(e.target.value)}
-          style={{ width: "100%", marginBottom: 10 }}
+          style={inputStyle}
+          placeholder="Örnek: 1.20"
         />
       </label>
-      <label>
+
+      <label style={labelStyle}>
         Yola Cephe Sayısı:
         <select
           value={yolCephe}
           onChange={(e) => setYolCephe(e.target.value)}
-          style={{ width: "100%", marginBottom: 10 }}
+          style={{ ...inputStyle, padding: "12px 10px" }}
         >
           <option value="1">1</option>
           <option value="2">2</option>
           <option value="3">3+</option>
         </select>
       </label>
-      <label>
+
+      <label style={{ ...labelStyle, display: "flex", alignItems: "center" }}>
         Eğim Var mı?
         <input
           type="checkbox"
           checked={egimVar}
           onChange={() => setEgimVar(!egimVar)}
-          style={{ marginLeft: 10 }}
+          style={{ marginLeft: 12, width: 20, height: 20, cursor: "pointer" }}
         />
       </label>
+
       <button
+        style={btnStyle}
         onClick={hesapla}
-        style={{ marginTop: 15, width: "100%", padding: "10px", fontSize: 16, cursor: "pointer" }}
+        onMouseEnter={() => setBtnHover(true)}
+        onMouseLeave={() => setBtnHover(false)}
       >
         Hesapla
       </button>
 
-      <div
-        ref={planRef}
-        style={{
-          marginTop: 30,
-          padding: 10,
-          border: "1px solid #ddd",
-          borderRadius: 8,
-          backgroundColor: "#f9f9f9",
-        }}
-      >
-        <h3>Sonuçlar</h3>
+      <div ref={planRef} style={resultsStyle}>
+        <h3 style={{ marginBottom: 15, color: "#111" }}>Sonuçlar</h3>
         <p>
           Toplam İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b>
         </p>
@@ -197,8 +251,10 @@ export default function App() {
       </div>
 
       <button
+        style={btnStyle}
         onClick={pdfOlustur}
-        style={{ marginTop: 15, width: "100%", padding: "10px", fontSize: 16, cursor: "pointer" }}
+        onMouseEnter={() => setBtnHover(true)}
+        onMouseLeave={() => setBtnHover(false)}
       >
         PDF Olarak Kaydet
       </button>
