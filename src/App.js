@@ -15,9 +15,12 @@ export default function App() {
   const [ucArtibir, setUcArtibir] = useState(0);
   const [ticariBirim, setTicariBirim] = useState(0);
 
-  // Yeni: Kullanıcı seçebilsin diye
-  const [ikiArtibirM2Value, setIkiArtibirM2Value] = useState(90);
-  const [ucArtibirM2Value, setUcArtibirM2Value] = useState(120);
+  // Kullanıcı seçebilsin diye ortalama net metrekareler
+  const [ikiArtibirNetM2, setIkiArtibirNetM2] = useState(75);
+  const [ucArtibirNetM2, setUcArtibirNetM2] = useState(110);
+
+  // Ortak alan oranı sabit %10 (0.10)
+  const ortakAlanOrani = 0.10;
 
   const planRef = useRef();
 
@@ -32,9 +35,11 @@ export default function App() {
       return;
     }
 
-    const insaat = arsa * kaksVal;
-    setToplamInsaat(insaat);
+    // Toplam brüt inşaat alanı
+    const brütInsaat = arsa * kaksVal;
+    setToplamInsaat(brütInsaat);
 
+    // Blok sayısı yol cephesine göre
     let blok;
     if (yol === 1) blok = 1;
     else if (yol === 2) blok = 2;
@@ -42,16 +47,23 @@ export default function App() {
     else blok = 1;
     setBlokSayisi(blok);
 
-    const konutAlani = insaat * 0.8;
-    const ticariAlani = insaat * 0.2;
+    // Net alan = brüt alan - ortak alan
+    const netInsaat = brütInsaat * (1 - ortakAlanOrani);
 
-    const daire2 = Math.floor((konutAlani * 0.5) / ikiArtibirM2Value);
-    const daire3 = Math.floor((konutAlani * 0.5) / ucArtibirM2Value);
-    const ticari = Math.floor(ticariAlani / 100);
+    // Net alan konut ve ticari olarak dağıtılıyor (80% konut, 20% ticari)
+    const netKonutAlani = netInsaat * 0.8;
+    const netTicariAlani = netInsaat * 0.2;
 
-    setIkiArtibir(daire2);
-    setUcArtibir(daire3);
-    setTicariBirim(ticari);
+    // 2+1 ve 3+1 daire sayısı net alan / ortalama net daire alanı
+    const daire2Adet = Math.floor((netKonutAlani * 0.5) / ikiArtibirNetM2);
+    const daire3Adet = Math.floor((netKonutAlani * 0.5) / ucArtibirNetM2);
+
+    // Ticari birim sayısı (ortalama 100 m2 kabul)
+    const ticariAdet = Math.floor(netTicariAlani / 100);
+
+    setIkiArtibir(daire2Adet);
+    setUcArtibir(daire3Adet);
+    setTicariBirim(ticariAdet);
   };
 
   const pdfOlustur = () => {
@@ -67,20 +79,25 @@ export default function App() {
       pdf.text(`KAKS: ${kaks}`, 10, 50);
       pdf.text(`Yola Cephe Sayısı: ${yolCephe}`, 10, 60);
       pdf.text(`Eğim Durumu: ${egimVar ? "Var" : "Yok"}`, 10, 70);
-      pdf.text(`Toplam İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`, 10, 80);
-      pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 90);
+      pdf.text(`Toplam Brüt İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`, 10, 80);
       pdf.text(
-        `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama: ${ikiArtibirM2Value} m²)`,
+        `Toplam Net İnşaat Alanı (Ortak Alan %10): ${(toplamInsaat * (1 - ortakAlanOrani)).toFixed(2)} m²`,
         10,
-        100
+        90
       );
+      pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 100);
       pdf.text(
-        `3+1 Daire Sayısı: ${ucArtibir} (Ortalama: ${ucArtibirM2Value} m²)`,
+        `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama Net: ${ikiArtibirNetM2} m²)`,
         10,
         110
       );
-      pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 120);
-      pdf.addImage(imgData, "PNG", 10, 130, 180, 100);
+      pdf.text(
+        `3+1 Daire Sayısı: ${ucArtibir} (Ortalama Net: ${ucArtibirNetM2} m²)`,
+        10,
+        120
+      );
+      pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 130);
+      pdf.addImage(imgData, "PNG", 10, 140, 180, 100);
       pdf.save("imar_raporu.pdf");
     });
   };
@@ -93,7 +110,11 @@ export default function App() {
     const blokGap = 10;
 
     return (
-      <svg width={width} height={height} style={{ border: "1px solid #aaa", borderRadius: 8 }}>
+      <svg
+        width={width}
+        height={height}
+        style={{ border: "1px solid #aaa", borderRadius: 8 }}
+      >
         {[...Array(blokSayisi)].map((_, i) => {
           const x = i * (blokWidth + blokGap) + (egimVar ? i * 10 : 0);
           const y = egimVar ? i * 5 : 20;
@@ -119,8 +140,8 @@ export default function App() {
     );
   };
 
-  // Hover buton efekti state
   const [btnHover, setBtnHover] = useState(false);
+
   const btnStyle = {
     width: "100%",
     padding: 14,
@@ -223,7 +244,9 @@ export default function App() {
         </select>
       </label>
 
-      <label style={{ ...labelStyle, display: "flex", alignItems: "center" }}>
+      <label
+        style={{ ...labelStyle, display: "flex", alignItems: "center" }}
+      >
         Eğim Var mı?
         <input
           type="checkbox"
@@ -233,28 +256,27 @@ export default function App() {
         />
       </label>
 
-      {/* Yeni inputlar */}
       <label style={labelStyle}>
-        2+1 Daire Ortalama M²:
+        2+1 Daire Ortalama Net M²:
         <input
           type="number"
-          value={ikiArtibirM2Value}
-          onChange={(e) => setIkiArtibirM2Value(Number(e.target.value))}
+          value={ikiArtibirNetM2}
+          onChange={(e) => setIkiArtibirNetM2(Number(e.target.value))}
           style={inputStyle}
           min={10}
-          placeholder="Örnek: 90"
+          placeholder="Örnek: 75"
         />
       </label>
 
       <label style={labelStyle}>
-        3+1 Daire Ortalama M²:
+        3+1 Daire Ortalama Net M²:
         <input
           type="number"
-          value={ucArtibirM2Value}
-          onChange={(e) => setUcArtibirM2Value(Number(e.target.value))}
+          value={ucArtibirNetM2}
+          onChange={(e) => setUcArtibirNetM2(Number(e.target.value))}
           style={inputStyle}
           min={10}
-          placeholder="Örnek: 120"
+          placeholder="Örnek: 110"
         />
       </label>
 
@@ -270,20 +292,39 @@ export default function App() {
       <div ref={planRef} style={resultsStyle}>
         <h3 style={{ marginBottom: 15, color: "#111" }}>Sonuçlar</h3>
         <p>
-          Toplam İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b>
+          Toplam Brüt İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b>
+        </p>
+        <p>
+          Toplam Net İnşaat Alanı (Ortak Alan %10):{" "}
+          <b>{(toplamInsaat * (1 - ortakAlanOrani)).toFixed(2)} m²</b>
         </p>
         <p>
           Önerilen Blok Sayısı: <b>{blokSayisi}</b>
         </p>
         <p>
-          2+1 Daire Sayısı: <b>{ikiArtibir}</b> (Toplam: <b>{(ikiArtibir * ikiArtibirM2Value).toFixed(2)} m²</b>)
+          2+1 Daire Sayısı: <b>{ikiArtibir}</b> (Toplam Net:{" "}
+          <b>{(ikiArtibir * ikiArtibirNetM2).toFixed(2)} m²</b>)
         </p>
         <p>
-          3+1 Daire Sayısı: <b>{ucArtibir}</b> (Toplam: <b>{(ucArtibir * ucArtibirM2Value).toFixed(2)} m²</b>)
+          3+1 Daire Sayısı: <b>{ucArtibir}</b> (Toplam Net:{" "}
+          <b>{(ucArtibir * ucArtibirNetM2).toFixed(2)} m²</b>)
         </p>
         <p>
           Tahmini Dükkan Sayısı: <b>{ticariBirim}</b>
         </p>
+        <p>
+          Toplam Ortak Alan: <b>{(toplamInsaat * ortakAlanOrani).toFixed(2)} m²</b>
+        </p>
+        <p>
+          Bağımsız Bölüm Başına Ortak Alan (m²):{" "}
+          <b>
+            {(
+              (toplamInsaat * ortakAlanOrani) /
+              (ikiArtibir + ucArtibir + ticariBirim)
+            ).toFixed(2)}
+          </b>
+        </p>
+
         <BlokYerlesimSVG />
       </div>
 
@@ -297,4 +338,4 @@ export default function App() {
       </button>
     </div>
   );
-}
+            }
