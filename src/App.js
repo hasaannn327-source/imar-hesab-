@@ -15,12 +15,13 @@ export default function App() {
   const [ucArtibir, setUcArtibir] = useState(0);
   const [ticariBirim, setTicariBirim] = useState(0);
 
-  // Kullanıcı seçebilsin diye ortalama net metrekareler
   const [ikiArtibirNetM2, setIkiArtibirNetM2] = useState(75);
   const [ucArtibirNetM2, setUcArtibirNetM2] = useState(110);
 
-  // Ortak alan oranı sabit %10 (0.10)
   const ortakAlanOrani = 0.10;
+
+  // Yeni: kat başı daire sayısı (user seçebilir)
+  const [katBasinaDaire, setKatBasinaDaire] = useState(4);
 
   const planRef = useRef();
 
@@ -35,11 +36,9 @@ export default function App() {
       return;
     }
 
-    // Toplam brüt inşaat alanı
     const brütInsaat = arsa * kaksVal;
     setToplamInsaat(brütInsaat);
 
-    // Blok sayısı yol cephesine göre
     let blok;
     if (yol === 1) blok = 1;
     else if (yol === 2) blok = 2;
@@ -47,18 +46,12 @@ export default function App() {
     else blok = 1;
     setBlokSayisi(blok);
 
-    // Net alan = brüt alan - ortak alan
     const netInsaat = brütInsaat * (1 - ortakAlanOrani);
-
-    // Net alan konut ve ticari olarak dağıtılıyor (80% konut, 20% ticari)
     const netKonutAlani = netInsaat * 0.8;
     const netTicariAlani = netInsaat * 0.2;
 
-    // 2+1 ve 3+1 daire sayısı net alan / ortalama net daire alanı
     const daire2Adet = Math.floor((netKonutAlani * 0.5) / ikiArtibirNetM2);
     const daire3Adet = Math.floor((netKonutAlani * 0.5) / ucArtibirNetM2);
-
-    // Ticari birim sayısı (ortalama 100 m2 kabul)
     const ticariAdet = Math.floor(netTicariAlani / 100);
 
     setIkiArtibir(daire2Adet);
@@ -97,7 +90,12 @@ export default function App() {
         120
       );
       pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 130);
-      pdf.addImage(imgData, "PNG", 10, 140, 180, 100);
+      pdf.text(`Kat Başına Daire Sayısı: ${katBasinaDaire}`, 10, 140);
+      const toplamDaire = ikiArtibir + ucArtibir;
+      const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
+      pdf.text(`Toplam Kat Sayısı (Tahmini): ${toplamKat}`, 10, 150);
+
+      pdf.addImage(imgData, "PNG", 10, 160, 180, 100);
       pdf.save("imar_raporu.pdf");
     });
   };
@@ -190,6 +188,9 @@ export default function App() {
     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
   };
 
+  const toplamDaire = ikiArtibir + ucArtibir;
+  const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
+
   return (
     <div style={containerStyle}>
       <h2 style={{ textAlign: "center", color: "#222", marginBottom: 25 }}>
@@ -280,6 +281,20 @@ export default function App() {
         />
       </label>
 
+      <label style={labelStyle}>
+        Bir Katta Kaç Daire Olsun?
+        <select
+          value={katBasinaDaire}
+          onChange={(e) => setKatBasinaDaire(Number(e.target.value))}
+          style={{ ...inputStyle, padding: "12px 10px" }}
+        >
+          <option value={2}>2</option>
+          <option value={3}>3</option>
+          <option value={4}>4</option>
+          <option value={5}>5</option>
+        </select>
+      </label>
+
       <button
         style={btnStyle}
         onClick={hesapla}
@@ -313,6 +328,15 @@ export default function App() {
           Tahmini Dükkan Sayısı: <b>{ticariBirim}</b>
         </p>
         <p>
+          Toplam Daire Sayısı: <b>{toplamDaire}</b>
+        </p>
+        <p>
+          Toplam Kat Sayısı (Tahmini): <b>{toplamKat}</b>
+        </p>
+        <p>
+          Bir Katta Kaç Daire: <b>{katBasinaDaire}</b>
+        </p>
+        <p>
           Toplam Ortak Alan: <b>{(toplamInsaat * ortakAlanOrani).toFixed(2)} m²</b>
         </p>
         <p>
@@ -338,4 +362,4 @@ export default function App() {
       </button>
     </div>
   );
-            }
+    }
