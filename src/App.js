@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { planNotuAnaliz } from "./planNotlari"; // plan notu fonksiyonları
 
 export default function App() {
   const [arsaM2, setArsaM2] = useState("");
@@ -58,7 +59,19 @@ export default function App() {
     setUcArtibir(daire3Adet);
     setTicariBirim(ticariAdet);
   };
+// --- Plan Notlarına Göre Analiz ---
+const analiz = planNotuAnaliz(brütInsaat, arsa, 1200); // 1200: VOR uzaklığı örnek
+console.log("Plan Notu Analizi:", analiz);
 
+alert(
+  `📋 Plan Notu Kontrolleri:\n` +
+  `👤 Kişi Sayısı: ${analiz.kisiSayisi}\n` +
+  `🚗 Gerekli Otopark: ${analiz.otopark} araç\n` +
+  `✈️ VOR Max Yükseklik: ${analiz.maxYukseklik} m\n` +
+  `🌊 Kıyıdan Uzaklık Uygun mu? ${analiz.kiyidanUzaklikUygun ? "✅ Evet" : "❌ Hayır"}\n` +
+  `🏞️ Dere Mesafesi Uygun mu? ${analiz.dereMesafeUygun ? "✅ Evet" : "❌ Hayır"}`
+);
+  
   const pdfOlustur = () => {
     if (!planRef.current) return;
     html2canvas(planRef.current).then((canvas) => {
