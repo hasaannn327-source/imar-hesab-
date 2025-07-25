@@ -15,6 +15,10 @@ export default function App() {
   const [ucArtibir, setUcArtibir] = useState(0);
   const [ticariBirim, setTicariBirim] = useState(0);
 
+  // Yeni: Kullanıcı seçebilsin diye
+  const [ikiArtibirM2Value, setIkiArtibirM2Value] = useState(90);
+  const [ucArtibirM2Value, setUcArtibirM2Value] = useState(120);
+
   const planRef = useRef();
 
   const hesapla = () => {
@@ -41,8 +45,8 @@ export default function App() {
     const konutAlani = insaat * 0.8;
     const ticariAlani = insaat * 0.2;
 
-    const daire2 = Math.floor((konutAlani * 0.5) / 90);
-    const daire3 = Math.floor((konutAlani * 0.5) / 120);
+    const daire2 = Math.floor((konutAlani * 0.5) / ikiArtibirM2Value);
+    const daire3 = Math.floor((konutAlani * 0.5) / ucArtibirM2Value);
     const ticari = Math.floor(ticariAlani / 100);
 
     setIkiArtibir(daire2);
@@ -65,8 +69,16 @@ export default function App() {
       pdf.text(`Eğim Durumu: ${egimVar ? "Var" : "Yok"}`, 10, 70);
       pdf.text(`Toplam İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`, 10, 80);
       pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 90);
-      pdf.text(`2+1 Daire Sayısı: ${ikiArtibir}`, 10, 100);
-      pdf.text(`3+1 Daire Sayısı: ${ucArtibir}`, 10, 110);
+      pdf.text(
+        `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama: ${ikiArtibirM2Value} m²)`,
+        10,
+        100
+      );
+      pdf.text(
+        `3+1 Daire Sayısı: ${ucArtibir} (Ortalama: ${ucArtibirM2Value} m²)`,
+        10,
+        110
+      );
       pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 120);
       pdf.addImage(imgData, "PNG", 10, 130, 180, 100);
       pdf.save("imar_raporu.pdf");
@@ -107,7 +119,7 @@ export default function App() {
     );
   };
 
-  // Basit hover efektini state ile yapıyoruz
+  // Hover buton efekti state
   const [btnHover, setBtnHover] = useState(false);
   const btnStyle = {
     width: "100%",
@@ -221,6 +233,31 @@ export default function App() {
         />
       </label>
 
+      {/* Yeni inputlar */}
+      <label style={labelStyle}>
+        2+1 Daire Ortalama M²:
+        <input
+          type="number"
+          value={ikiArtibirM2Value}
+          onChange={(e) => setIkiArtibirM2Value(Number(e.target.value))}
+          style={inputStyle}
+          min={10}
+          placeholder="Örnek: 90"
+        />
+      </label>
+
+      <label style={labelStyle}>
+        3+1 Daire Ortalama M²:
+        <input
+          type="number"
+          value={ucArtibirM2Value}
+          onChange={(e) => setUcArtibirM2Value(Number(e.target.value))}
+          style={inputStyle}
+          min={10}
+          placeholder="Örnek: 120"
+        />
+      </label>
+
       <button
         style={btnStyle}
         onClick={hesapla}
@@ -239,10 +276,10 @@ export default function App() {
           Önerilen Blok Sayısı: <b>{blokSayisi}</b>
         </p>
         <p>
-          2+1 Daire Sayısı: <b>{ikiArtibir}</b>
+          2+1 Daire Sayısı: <b>{ikiArtibir}</b> (Toplam: <b>{(ikiArtibir * ikiArtibirM2Value).toFixed(2)} m²</b>)
         </p>
         <p>
-          3+1 Daire Sayısı: <b>{ucArtibir}</b>
+          3+1 Daire Sayısı: <b>{ucArtibir}</b> (Toplam: <b>{(ucArtibir * ucArtibirM2Value).toFixed(2)} m²</b>)
         </p>
         <p>
           Tahmini Dükkan Sayısı: <b>{ticariBirim}</b>
@@ -260,4 +297,4 @@ export default function App() {
       </button>
     </div>
   );
-      }
+}
