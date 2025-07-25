@@ -2,8 +2,8 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>İmar Hesaplama</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>İmar Hesab</title>
   </head>
   <body>
     <div id="root"></div>
