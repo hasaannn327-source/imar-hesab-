@@ -2,6 +2,40 @@ import React, { useState, useRef } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
+const BlokYerlesimSVG = ({ blokSayisi, egimVar }) => {
+  const width = 300;
+  const height = 200;
+  const blokWidth = blokSayisi === 1 ? 250 : blokSayisi === 2 ? 120 : 80;
+  const blokHeight = 150;
+  const blokGap = 10;
+
+  return (
+    <svg width={width} height={height} style={{ border: "1px solid #aaa" }}>
+      {[...Array(blokSayisi)].map((_, i) => {
+        const x = i * (blokWidth + blokGap) + (egimVar ? i * 10 : 0);
+        const y = egimVar ? i * 5 : 20;
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={y}
+            width={blokWidth}
+            height={blokHeight}
+            fill="#4a90e2"
+            stroke="#003366"
+            strokeWidth={2}
+            rx={10}
+            ry={10}
+          />
+        );
+      })}
+      <text x="10" y="15" fontSize="14" fill="#333">
+        Blok Yerleşim Planı
+      </text>
+    </svg>
+  );
+};
+
 export default function ImarHesap() {
   const [arsaM2, setArsaM2] = useState("");
   const [taks, setTaks] = useState("");
@@ -17,7 +51,7 @@ export default function ImarHesap() {
     const arsa = parseFloat(arsaM2);
     const taksVal = parseFloat(taks);
     const kaksVal = parseFloat(kaks);
-    const yol = parseInt(yolCephe);
+    const yol = parseInt(yolCephe, 10);
 
     if (isNaN(arsa) || isNaN(taksVal) || isNaN(kaksVal) || isNaN(yol)) {
       alert("Lütfen tüm alanları doğru doldur!");
@@ -50,51 +84,28 @@ export default function ImarHesap() {
       pdf.text(`KAKS: ${kaks}`, 10, 50);
       pdf.text(`Yola Cephe Sayısı: ${yolCephe}`, 10, 60);
       pdf.text(`Eğim Durumu: ${egimVar ? "Var" : "Yok"}`, 10, 70);
-      pdf.text(`Toplam İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`, 10, 80);
+      pdf.text(
+        `Toplam İnşaat Alanı: ${
+          isNaN(toplamInsaat) ? "0.00" : toplamInsaat.toFixed(2)
+        } m²`,
+        10,
+        80
+      );
       pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 90);
       pdf.addImage(imgData, "PNG", 10, 100, 180, 100);
       pdf.save("imar_raporu.pdf");
     });
   };
 
-  // Basit yerleşim planı SVG'si
-  const BlokYerlesimSVG = () => {
-    const width = 300;
-    const height = 200;
-    const blokWidth = blokSayisi === 1 ? 250 : blokSayisi === 2 ? 120 : 80;
-    const blokHeight = 150;
-    const blokGap = 10;
-
-    return (
-      <svg width={width} height={height} style={{ border: "1px solid #aaa" }}>
-        {[...Array(blokSayisi)].map((_, i) => {
-          // Eğim varsa blokları biraz kaydır
-          const x = i * (blokWidth + blokGap) + (egimVar ? i * 10 : 0);
-          const y = egimVar ? i * 5 : 20;
-          return (
-            <rect
-              key={i}
-              x={x}
-              y={y}
-              width={blokWidth}
-              height={blokHeight}
-              fill="#4a90e2"
-              stroke="#003366"
-              strokeWidth={2}
-              rx={10}
-              ry={10}
-            />
-          );
-        })}
-        <text x="10" y="15" fontSize="14" fill="#333">
-          Blok Yerleşim Planı
-        </text>
-      </svg>
-    );
-  };
-
   return (
-    <div style={{ maxWidth: 400, margin: "20px auto", fontFamily: "Arial, sans-serif" }}>
+    <div
+      style={{
+        maxWidth: 400,
+        margin: "20px auto",
+        fontFamily: "Arial, sans-serif",
+        padding: 20,
+      }}
+    >
       <h2>İmar Hesaplama</h2>
       <label>
         Arsa Alanı (m²):
@@ -148,7 +159,13 @@ export default function ImarHesap() {
       </label>
       <button
         onClick={hesapla}
-        style={{ marginTop: 15, width: "100%", padding: "10px", fontSize: 16, cursor: "pointer" }}
+        style={{
+          marginTop: 15,
+          width: "100%",
+          padding: "10px",
+          fontSize: 16,
+          cursor: "pointer",
+        }}
       >
         Hesapla
       </button>
@@ -165,20 +182,27 @@ export default function ImarHesap() {
       >
         <h3>Sonuçlar</h3>
         <p>
-          Toplam İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b>
+          Toplam İnşaat Alanı:{" "}
+          <b>{isNaN(toplamInsaat) ? "0.00" : toplamInsaat.toFixed(2)} m²</b>
         </p>
         <p>
           Önerilen Blok Sayısı: <b>{blokSayisi}</b>
         </p>
-        <BlokYerlesimSVG />
+        <BlokYerlesimSVG blokSayisi={blokSayisi} egimVar={egimVar} />
       </div>
 
       <button
         onClick={pdfOlustur}
-        style={{ marginTop: 15, width: "100%", padding: "10px", fontSize: 16, cursor: "pointer" }}
+        style={{
+          marginTop: 15,
+          width: "100%",
+          padding: "10px",
+          fontSize: 16,
+          cursor: "pointer",
+        }}
       >
         PDF Olarak Kaydet
       </button>
     </div>
   );
-      }
+          }
