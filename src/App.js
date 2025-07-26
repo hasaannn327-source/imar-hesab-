@@ -65,6 +65,7 @@ export default function App() {
     else if (yol >= 3) blok = 3;
     setBlokSayisi(blok);
 
+    // TAKS ve KAKS hesaplaması sadece kullanılabilir arsaya göre
     const taksAlani = kullanilabilirArsa * taksVal;
     const kaksAlani = kullanilabilirArsa * kaksVal;
 
@@ -397,10 +398,24 @@ export default function App() {
 
       <section ref={planRef} style={{ ...sectionStyle, marginTop: 30 }}>
         <h2 style={{ color: "#1976d2" }}>Sonuçlar</h2>
-        <p>Toplam Brüt İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b></p>
-        <p>Toplam Net İnşaat Alanı (Ortak Alan %10): <b>{(toplamInsaat * (1 - ortakAlanOrani)).toFixed(2)} m²</b></p>
-        <p>Önerilen Blok Sayısı: <b>{blokSayisi}</b></p>
-        <p>2+1 Daire Sayısı: <b>{ikiArtibir}</b></p>
-        <p>3+1 Daire Sayısı: <b>{ucArtibir}</b></p>
-        <p>Tahmini Dükkan Sayısı: <b>{ticariBirim}</b></p>
-        <p>Toplam D
+        <p>
+          Toplam Brüt İnşaat Alanı: <b>{toplamInsaat.toFixed(2)} m²</b>
+        </p>
+        <p>
+          Toplam Net İnşaat Alanı (Ortak Alan %10):{" "}
+          <b>{(toplamInsaat * (1 - ortakAlanOrani)).toFixed(2)} m²</b>
+        </p>
+        <p>
+          Önerilen Blok Sayısı: <b>{blokSayisi}</b>
+        </p>
+        <p>
+          2+1 Daire Sayısı: <b>{ikiArtibir}</b>
+        </p>
+        <p>
+          3+1 Daire Sayısı: <b>{ucArtibir}</b>
+        </p>
+        <p>
+          Tahmini Dükkan Sayısı: <b>{ticariBirim}</b>
+        </p>
+        <p>
+          Toplam Daire
