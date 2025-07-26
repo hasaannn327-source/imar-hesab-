@@ -25,7 +25,7 @@ export default function App() {
   // Sonuçlar
   const [sonuclar, setSonuclar] = useState(null);
 
-  // Yönetmelik kontrolü fonksiyonu (basit örnek)
+  // Yönetmelik kontrolü fonksiyonu (basit örnek, gerektiği kadar detay eklenebilir)
   function yonetmelikKontrol(arsa, taksVal, kaksVal) {
     const errors = [];
     if (taksVal > 0.5) errors.push("TAKS 0.5'ten büyük olamaz (Madde X).");
@@ -49,7 +49,11 @@ export default function App() {
       alert("Lütfen Arsa, TAKS ve KAKS değerlerini doğru giriniz.");
       return;
     }
-    if ((!ikiNet || ikiNet <= 0) && (!ucNet || ucNet <= 0) && !ticariAlanVar) {
+    if (
+      (isNaN(ikiNet) || ikiNet <= 0) &&
+      (isNaN(ucNet) || ucNet <= 0) &&
+      !ticariAlanVar
+    ) {
       alert("En az bir daire tipi seçilmeli veya ticari alan işaretlenmeli.");
       return;
     }
@@ -62,11 +66,14 @@ export default function App() {
     }
 
     // Çekme mesafeleri nedeniyle net arsa alanı hesapla
+    // Burada basitçe kenarlardan toplam çekme mesafesi ile hesap yapıyoruz
     const toplamCekme =
-      (cekmeMesafeleri.onBahce || 0) +
-      (cekmeMesafeleri.yanBahce || 0) * 2 +
-      (cekmeMesafeleri.arkaBahce || 0);
-    const netArsa = Math.max(arsa - toplamCekme * 10, 0); // Basit formül örneği
+      cekmeMesafeleri.onBahce * arsa ** 0 +
+      cekmeMesafeleri.yanBahce * 2 +
+      cekmeMesafeleri.arkaBahce;
+
+    // Burada 10 ile çarptım ki alan olarak azaltsın, istersen burayı sen düzenle
+    const netArsa = Math.max(arsa - toplamCekme * 10, 0);
 
     // Brüt ve net inşaat alanları
     const brutInsaat = arsa * kaksVal;
@@ -76,21 +83,25 @@ export default function App() {
     const netTicariAlani = ticariAlanVar ? netInsaat * 0.2 : 0;
     const netKonutAlani = netInsaat - netTicariAlani;
 
-    // Daire adetleri
+    // Daire adetleri (opsiyonel olarak 0 ise o daire tipi yok sayılır)
     let ikiAdet = 0,
       ucAdet = 0;
+
     if (ikiNet > 0) ikiAdet = Math.floor((netKonutAlani * 0.5) / ikiNet);
     if (ucNet > 0) ucAdet = Math.floor((netKonutAlani * 0.5) / ucNet);
     const toplamDaire = ikiAdet + ucAdet;
 
-    // Otopark hesabı
+    // Otopark hesabı: her 3 daire için 1 araç
     const otoparkIhtiyaci = Math.ceil(toplamDaire / 3);
-    const suDeposuGereklilik = toplamDaire > 30 ? "10 tonluk su deposu gereklidir." : "";
 
-    // Ağaç hesabı
+    // Su deposu gereklilik: 30+ daire için 10 tonluk depo örnek
+    const suDeposuGereklilik =
+      toplamDaire > 30 ? "10 tonluk su deposu gereklidir." : "";
+
+    // Ağaç hesabı: arsa 500+ ise 2 ağaç örneği
     const agacIhtiyaci = arsa >= 500 ? "En az 2 ağaç dikimi gereklidir." : "";
 
-    // Sarnıç
+    // Sarnıç zorunluluğu: 1000+ arsa alanı için örnek
     const sarnicZorunlu = arsa >= 1000 ? "Sarnıç zorunludur." : "";
 
     // Blok sayısı ve kat hesabı (max kat: maxKatYonetmelik)
@@ -98,9 +109,10 @@ export default function App() {
     if (parseInt(yolCephe) === 2) blokSayisi = 2;
     else if (parseInt(yolCephe) >= 3) blokSayisi = 3;
 
+    // Kat sayısı, daire sayısı ve blok sayısına göre
     let katSayisi = Math.ceil(toplamDaire / (katDaire * blokSayisi));
     if (katSayisi > maxKatYonetmelik) {
-      // Kat sayısı fazla ise blok sayısını artır
+      // Kat sayısı fazla ise blok sayısını artırarak kat sayısını azaltmaya çalış
       while (katSayisi > maxKatYonetmelik) {
         blokSayisi++;
         katSayisi = Math.ceil(toplamDaire / (katDaire * blokSayisi));
@@ -171,7 +183,6 @@ export default function App() {
     color: "#111",
     lineHeight: 1.5,
   };
-  const errorStyle = { color: "red", marginBottom: 12, fontWeight: "700" };
 
   return (
     <div style={containerStyle}>
