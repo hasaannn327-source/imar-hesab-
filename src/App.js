@@ -1,353 +1,301 @@
-import React, { useState, useRef } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import React, { useState } from "react";
 
 export default function App() {
-  // Temel inputlar
-  const [arsaM2, setArsaM2] = useState("");
-  const [taks, setTaks] = useState("");
-  const [kaks, setKaks] = useState("");
-  const [yolCephe, setYolCephe] = useState("1");
-
-  // Net daire alanları
-  const [ikiArtibirNetM2, setIkiArtibirNetM2] = useState("");
-  const [ucArtibirNetM2, setUcArtibirNetM2] = useState("");
-
-  // Ticari alan seçeneği
-  const [ticariIstegi, setTicariIstegi] = useState(true);
-
-  // Kat başına daire
+  // --- Girdi Durumları ---
+  const [arsaM2, setArsaM2] = useState(500);
+  const [taks, setTaks] = useState(0.4);
+  const [kaks, setKaks] = useState(1.2);
+  const [cekme, setCekme] = useState({ on: 3, yan: 2, arka: 5 });
+  const [blokSayisi, setBlokSayisi] = useState(2);
   const [katBasinaDaire, setKatBasinaDaire] = useState(4);
+  const [maxKat, setMaxKat] = useState(5);
+  const [ticariAlaniKullan, setTicariAlaniKullan] = useState(true);
+  const [daireNetM2, setDaireNetM2] = useState(110);
 
-  // Çekme mesafeleri (varsayılan, opsiyonel değişebilir)
-  const [cekmeYol, setCekmeYol] = useState(3); // m
-  const [cekmeYan, setCekmeYan] = useState(2); // m
-  const [cekmeArka, setCekmeArka] = useState(2); // m
-
-  // Yönetmelikten gelen max kat (Hmax)
-  const [maxKat, setMaxKat] = useState(5); // Örnek sabit 5, istersen input ekleyebilirsin
-
-  // İç durumlar
-  const [toplamInsaat, setToplamInsaat] = useState(0);
-  const [blokSayisi, setBlokSayisi] = useState(1);
-
-  const [ikiArtibir, setIkiArtibir] = useState(0);
-  const [ucArtibir, setUcArtibir] = useState(0);
-  const [ticariBirim, setTicariBirim] = useState(0);
-
-  const [uygunlukDurumu, setUygunlukDurumu] = useState(""); // Yönetmelik sonucu mesajı
-
+  // --- Sabitler ---
   const ortakAlanOrani = 0.1;
-  const planRef = useRef();
+  const otoparkKisiBasiArac = 3; // 3 daireye 1 otopark
+  const sarnicLimiti = 30; // 30 daire üstü su deposu zorunlu
+  const agacOrani = 10; // 10 m2 ye 1 ağaç
 
-  // Yönetmelik kontrolü fonksiyonu
-  function yonetmelikKontrol(arsa, taksVal, kaksVal, katSayisi) {
-    // Basit örnek kontroller, istediğin kadar geliştirilebilir:
-    if (taksVal > 0.6) return "TAKS 0.6'dan büyük olamaz!";
-    if (kaksVal > 2.0) return "KAKS 2.0'dan büyük olamaz!";
-    if (katSayisi > maxKat) return `Kat sayısı ${maxKat}’dan fazla olamaz!`;
-    if (arsa < 100) return "Arsa çok küçük (min 100 m² olmalı).";
-    return ""; // Uygun
-  }
+  // --- Hesaplamalar ---
+  const arsaKenar = Math.sqrt(arsaM2);
+  const netGenislik = Math.max(0, arsaKenar - cekme.yan - cekme.yan);
+  const netDerinlik = Math.max(0, arsaKenar - cekme.on - cekme.arka);
+  const netArsaM2 = netGenislik * netDerinlik;
 
-  // Hesaplama fonksiyonu
-  const hesapla = () => {
-    const arsa = parseFloat(arsaM2);
-    const taksVal = parseFloat(taks);
-    const kaksVal = parseFloat(kaks);
+  const brütInsaat = arsaM2 * kaks;
+  const netInsaat = brütInsaat * (1 - ortakAlanOrani);
 
-    if (isNaN(arsa) || isNaN(taksVal) || isNaN(kaksVal)) {
-      alert("Lütfen Arsa, TAKS ve KAKS değerlerini doğru girin!");
-      return;
-    }
+  const ticariOran = ticariAlaniKullan ? 0.2 : 0;
+  const konutOran = 1 - ticariOran;
 
-    // Çekme mesafelerine göre efektif arsa alanı hesapla
-    // Basitçe: Çekme mesafeleri toplamını 2 ile çarp, dikdörtgen varsayımıyla
-    // Arsa kare varsayımı olmadığından, en azından % olarak gösterelim
+  const netKonutAlani = netInsaat * konutOran;
+  const netTicariAlani = netInsaat * ticariOran;
 
-    const toplamCekme = cekmeYol + cekmeYan * 2 + cekmeArka;
-    // Burada biraz basitleştiriyoruz:
-    // Arsa eni ve boyu bilinmediği için yaklaşık % çekme mesafesi alan kaybı hesaplanıyor
-    // Gerçek proje için arsa eni-boyu girilmeli
-    const cekmeAlanKaybiOrani = toplamCekme / Math.sqrt(arsa); // Yaklaşık
+  // Daire sayısı
+  const daireSayisi = Math.floor(netKonutAlani / daireNetM2);
+  // Maks kat ve kat başı daireye göre max daire hesapla
+  const maxDaireKatAdedi = maxKat * katBasinaDaire;
 
-    let efektifArsa = arsa * (1 - cekmeAlanKaybiOrani);
-    if (efektifArsa < 0) efektifArsa = 0;
+  // Yönetmelik kontrolü
+  const uyumsuzluklar = [];
+  if (taks > 0.4) uyumsuzluklar.push("TAKS 0.4'ü aşamaz!");
+  if (maxKat > 5) uyumsuzluklar.push("Maksimum kat 5 olmalı!");
+  if (netArsaM2 <= 0) uyumsuzluklar.push("Çekme mesafeleri çok yüksek, net arsa kalmadı!");
 
-    // Brüt inşaat
-    const brutInsaat = efektifArsa * kaksVal;
-    setToplamInsaat(brutInsaat);
+  if (daireSayisi > maxDaireKatAdedi)
+    uyumsuzluklar.push(`Daire sayısı (${daireSayisi}) maksimum kat * kat başı daire (${maxDaireKatAdedi}) değerini aşıyor!`);
 
-    // Blok sayısı yola cepheye göre
-    let blok;
-    if (yolCephe === "1") blok = 1;
-    else if (yolCephe === "2") blok = 2;
-    else blok = 3;
-    setBlokSayisi(blok);
+  // Otopark hesabı
+  const otoparkAdedi = Math.ceil(daireSayisi / otoparkKisiBasiArac);
 
-    // Net inşaat alanı (ortak alan hariç)
-    const netInsaat = brutInsaat * (1 - ortakAlanOrani);
+  // Su deposu
+  const sarnicGereklimi = daireSayisi > sarnicLimiti;
 
-    // Ticari ve konut alanları
-    let ticariNetAlani = 0;
-    let konutNetAlani = 0;
+  // Ağaç sayısı (toplam alanın %10'u ağaç alanı)
+  const agacAlani = arsaM2 * 0.1;
+  const agacSayisi = Math.floor(agacAlani / agacOrani);
 
-    if (ticariIstegi) {
-      ticariNetAlani = netInsaat * 0.2;
-      konutNetAlani = netInsaat * 0.8;
-    } else {
-      ticariNetAlani = 0;
-      konutNetAlani = netInsaat;
-    }
+  // SVG ölçek
+  const svgSize = 400;
+  const scale = svgSize / arsaKenar;
 
-    // 2+1 ve 3+1 daire adetleri
-    const ikiNet = parseFloat(ikiArtibirNetM2);
-    const ucNet = parseFloat(ucArtibirNetM2);
-
-    const daire2Adet = ikiNet > 0 ? Math.floor(konutNetAlani / ikiNet) : 0;
-    const daire3Adet = ucNet > 0 ? Math.floor(konutNetAlani / ucNet) : 0;
-
-    setIkiArtibir(daire2Adet);
-    setUcArtibir(daire3Adet);
-
-    // Ticari dükkan sayısı
-    const ticariAdet = ticariNetAlani > 0 ? Math.floor(ticariNetAlani / 100) : 0;
-    setTicariBirim(ticariAdet);
-
-    // Tahmini kat sayısı (daha önce hesaplanır, maxKat'ı aşamaz)
-    const toplamDaire = daire2Adet + daire3Adet;
-    const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blok));
-    const katSayisi = Math.min(toplamKat, maxKat);
-
-    // Yönetmelik kontrolü yap
-    const yonetmelikMesaj = yonetmelikKontrol(arsa, taksVal, kaksVal, katSayisi);
-    setUygunlukDurumu(yonetmelikMesaj);
-  };
-
-  // PDF oluşturma fonksiyonu (aynı önceki gibi)
-  const pdfOlustur = () => {
-    if (!planRef.current) return;
-    html2canvas(planRef.current).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      pdf.setFontSize(16);
-      pdf.text("İmar Hesaplama Raporu", 10, 20);
-      pdf.setFontSize(12);
-      pdf.text(`Arsa Alanı: ${arsaM2} m²`, 10, 30);
-      pdf.text(`TAKS: ${taks}`, 10, 40);
-      pdf.text(`KAKS: ${kaks}`, 10, 50);
-      pdf.text(`Yola Cephe Sayısı: ${yolCephe}`, 10, 60);
-      pdf.text(`Toplam Brüt İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`, 10, 70);
-      pdf.text(
-        `Toplam Net İnşaat Alanı (Ortak Alan %10): ${(toplamInsaat * (1 - ortakAlanOrani)).toFixed(2)} m²`,
-        10,
-        80
-      );
-      pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 90);
-      pdf.text(
-        `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama Net: ${ikiArtibirNetM2 || 0} m²)`,
-        10,
-        100
-      );
-      pdf.text(
-        `3+1 Daire Sayısı: ${ucArtibir} (Ortalama Net: ${ucArtibirNetM2 || 0} m²)`,
-        10,
-        110
-      );
-      pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 120);
-      pdf.text(`Kat Başına Daire Sayısı: ${katBasinaDaire}`, 10, 130);
-      pdf.text(`Maksimum Kat Sayısı (Yönetmelik): ${maxKat}`, 10, 140);
-      pdf.text(
-        uygunlukDurumu ? `UYARI: ${uygunlukDurumu}` : "Yönetmelik Uygunluğu: TAMAM",
-        10,
-        150
-      );
-
-      pdf.addImage(imgData, "PNG", 10, 160, 180, 100);
-      pdf.save("imar_raporu.pdf");
+  // Blok boyutları ve konumları
+  const blokGenislik = (netGenislik / blokSayisi) * scale * 0.9;
+  const blokYukseklik = 50;
+  const bloklar = [];
+  for (let i = 0; i < blokSayisi; i++) {
+    bloklar.push({
+      x: cekme.yan * scale + i * (blokGenislik + 10),
+      y: cekme.on * scale + 20,
+      width: blokGenislik,
+      height: blokYukseklik,
     });
-  };
-
-  // Blok çizimi
-  const BlokYerlesimSVG = () => {
-    const width = 300;
-    const height = 200;
-    const blokWidth = blokSayisi === 1 ? 250 : blokSayisi === 2 ? 120 : 80;
-    const blokHeight = 150;
-    const blokGap = 10;
-
-    return (
-      <svg width={width} height={height} style={{ border: "1px solid #aaa", borderRadius: 8, marginTop: 20 }}>
-        {[...Array(blokSayisi)].map((_, i) => {
-          const x = i * (blokWidth + blokGap);
-          const y = 20;
-          return (
-            <rect
-              key={i}
-              x={x}
-              y={y}
-              width={blokWidth}
-              height={blokHeight}
-              fill="#4a90e2"
-              stroke="#003366"
-              strokeWidth={2}
-              rx={10}
-              ry={10}
-            />
-          );
-        })}
-        <text x="10" y="15" fontSize="14" fill="#333">
-          Blok Yerleşim Planı
-        </text>
-      </svg>
-    );
-  };
-
-  const [btnHover, setBtnHover] = useState(false);
-
-  const btnStyle = {
-    width: "100%",
-    padding: 14,
-    fontSize: 18,
-    borderRadius: 10,
-    border: "none",
-    backgroundColor: btnHover ? "#0056b3" : "#007bff",
-    color: "white",
-    cursor: "pointer",
-    transition: "background-color 0.3s ease",
-    marginTop: 15,
-  };
-
-  const inputStyle = {
-    width: "100%",
-    padding: "12px 15px",
-    marginBottom: 15,
-    borderRadius: 8,
-    border: "1.8px solid #ccc",
-    fontSize: 16,
-    outline: "none",
-  };
-
-  const labelStyle = {
-    fontWeight: "600",
-    display: "block",
-    marginBottom: 6,
-    color: "#333",
-  };
-
-  const containerStyle = {
-    maxWidth: 470,
-    margin: "40px auto",
-    fontFamily: "'Poppins', sans-serif",
-    backgroundColor: "#f7f9fc",
-    padding: 25,
-    borderRadius: 15,
-    boxShadow: "0 12px 25px rgba(0,0,0,0.12)",
-  };
-
-  const resultsStyle = {
-    marginTop: 30,
-    padding: 15,
-    borderRadius: 12,
-    backgroundColor: "white",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-  };
-
-  const toplamDaire = ikiArtibir + ucArtibir;
-  const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
-
-  // Gösterilecek efektif arsa alanı
-  const cekmeYuzdesi = Math.min(cekmeYol + cekmeYan * 2 + cekmeArka, Math.sqrt(arsaM2 || 0));
-  let efektifArsaAlan = 0;
-  if (arsaM2 && cekmeYuzdesi > 0) {
-    let oran = cekmeYuzdesi / Math.sqrt(arsaM2);
-    efektifArsaAlan = arsaM2 * (1 - oran);
-    if (efektifArsaAlan < 0) efektifArsaAlan = 0;
   }
 
   return (
-    <div style={containerStyle}>
-      <h2 style={{ textAlign: "center", color: "#222", marginBottom: 25 }}>
-        İmar Hesaplama ve Yönetmelik Kontrolü
-      </h2>
+    <div style={{ maxWidth: 700, margin: "auto", fontFamily: "Arial, sans-serif", padding: 20 }}>
+      <h1 style={{ textAlign: "center", marginBottom: 30 }}>İmar Hesaplama Modülü</h1>
 
-      <label style={labelStyle}>
-        Arsa Alanı (m²):
-        <input
-          type="number"
-          value={arsaM2}
-          onChange={(e) => setArsaM2(e.target.value)}
-          style={inputStyle}
-          placeholder="Örnek: 500"
-        />
-      </label>
+      {/* Girdi alanları */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 15, marginBottom: 25 }}>
+        <label style={{ flex: "1 1 200px" }}>
+          Arsa Alanı (m²):
+          <input
+            type="number"
+            value={arsaM2}
+            onChange={(e) => setArsaM2(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={50}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          TAKS:
+          <input
+            type="number"
+            value={taks}
+            step={0.01}
+            onChange={(e) => setTaks(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={0}
+            max={1}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          KAKS:
+          <input
+            type="number"
+            value={kaks}
+            step={0.01}
+            onChange={(e) => setKaks(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={0}
+            max={5}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Ön Çekme (m):
+          <input
+            type="number"
+            value={cekme.on}
+            onChange={(e) => setCekme({ ...cekme, on: Number(e.target.value) })}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={0}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Yan Çekme (m):
+          <input
+            type="number"
+            value={cekme.yan}
+            onChange={(e) => setCekme({ ...cekme, yan: Number(e.target.value) })}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={0}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Arka Çekme (m):
+          <input
+            type="number"
+            value={cekme.arka}
+            onChange={(e) => setCekme({ ...cekme, arka: Number(e.target.value) })}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={0}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Blok Sayısı:
+          <input
+            type="number"
+            value={blokSayisi}
+            onChange={(e) => setBlokSayisi(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={1}
+            max={5}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Kat Başına Daire:
+          <input
+            type="number"
+            value={katBasinaDaire}
+            onChange={(e) => setKatBasinaDaire(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={1}
+            max={8}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Maksimum Kat:
+          <input
+            type="number"
+            value={maxKat}
+            onChange={(e) => setMaxKat(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={1}
+            max={10}
+          />
+        </label>
+        <label style={{ flex: "1 1 150px", display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="checkbox"
+            checked={ticariAlaniKullan}
+            onChange={() => setTicariAlaniKullan(!ticariAlaniKullan)}
+          />
+          Ticari Alan Kullanılsın mı?
+        </label>
+        <label style={{ flex: "1 1 150px" }}>
+          Ortalama Daire Net M²:
+          <input
+            type="number"
+            value={daireNetM2}
+            onChange={(e) => setDaireNetM2(Number(e.target.value))}
+            style={{ width: "100%", padding: 8, fontSize: 16 }}
+            min={10}
+            max={200}
+          />
+        </label>
+      </div>
 
-      <label style={labelStyle}>
-        TAKS:
-        <input
-          type="number"
-          step="0.01"
-          value={taks}
-          onChange={(e) => setTaks(e.target.value)}
-          style={inputStyle}
-          placeholder="Örnek: 0.40"
-        />
-      </label>
-
-      <label style={labelStyle}>
-        KAKS:
-        <input
-          type="number"
-          step="0.01"
-          value={kaks}
-          onChange={(e) => setKaks(e.target.value)}
-          style={inputStyle}
-          placeholder="Örnek: 1.20"
-        />
-      </label>
-
-      <label style={labelStyle}>
-        Yola Cephe Sayısı:
-        <select
-          value={yolCephe}
-          onChange={(e) => setYolCephe(e.target.value)}
-          style={{ ...inputStyle, padding: "12px 10px" }}
-        >
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3+</option>
-        </select>
-      </label>
-
-      <label style={labelStyle}>
-        2+1 Daire Ortalama Net M² (0 ise hesaplanmaz):
-        <input
-          type="number"
-          min={0}
-          value={ikiArtibirNetM2}
-          onChange={(e) => setIkiArtibirNetM2(e.target.value)}
-          style={inputStyle}
-          placeholder="Örnek: 75"
-        />
-      </label>
-
-      <label style={labelStyle}>
-        3+1 Daire Ortalama Net M² (0 ise hesaplanmaz):
-        <input
-          type="number"
-          min={0}
-          value={ucArtibirNetM2}
-          onChange={(e) => setUcArtibirNetM2(e.target.value)}
-          style={inputStyle}
-          placeholder="Örnek: 110"
-        />
-      </label>
-
-      <label
-        style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 10 }}
+      {/* SVG Arsa + Blok Yerleşim */}
+      <svg
+        width={svgSize}
+        height={svgSize}
+        style={{ border: "2px solid #333", borderRadius: 8, background: "#fafafa", marginBottom: 25 }}
       >
-        Ticari İster misiniz?
-        <input
-          type="checkbox"
-          checked={ticariIstegi}
-          onChange={() => setTicariIstegi(!ticariIstegi
+        {/* Arsa sınırı */}
+        <rect
+          x={0}
+          y={0}
+          width={arsaKenar * scale}
+          height={arsaKenar * scale}
+          fill="#cce5ff"
+          stroke="#004085"
+          strokeWidth={2}
+        />
+        <text x={10} y={20} fontSize={14} fill="#004085">
+          Arsa (Toplam {arsaM2} m²)
+        </text>
+
+        {/* Çekme mesafeleri */}
+        <rect
+          x={cekme.yan * scale}
+          y={cekme.on * scale}
+          width={(arsaKenar - cekme.yan - cekme.yan) * scale}
+          height={(arsaKenar - cekme.on - cekme.arka) * scale}
+          fill="#d4edda"
+          stroke="#155724"
+          strokeWidth={2}
+          opacity={0.7}
+        />
+        <text
+          x={cekme.yan * scale + 10}
+          y={cekme.on * scale + 20}
+          fontSize={14}
+          fill="#155724"
+        >
+          Net Arsa (yaklaşık {Math.round(netArsaM2)} m²)
+        </text>
+
+        {/* Bloklar */}
+        {bloklar.map((blok, i) => (
+          <rect
+            key={i}
+            x={blok.x}
+            y={blok.y}
+            width={blok.width}
+            height={blok.height}
+            fill="#007bff"
+            stroke="#004085"
+            strokeWidth={2}
+            rx={6}
+            ry={6}
+          />
+        ))}
+
+        {/* Blok numaraları */}
+        {bloklar.map((blok, i) => (
+          <text
+            key={"text" + i}
+            x={blok.x + blok.width / 2}
+            y={blok.y + blok.height / 2 + 5}
+            fontSize={16}
+            fill="#fff"
+            fontWeight="bold"
+            textAnchor="middle"
+          >
+            {i + 1}
+          </text>
+        ))}
+      </svg>
+
+      {/* Sonuçlar */}
+      <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+        <h3>Hesap Sonuçları</h3>
+        {uyumsuzluklar.length === 0 ? (
+          <>
+            <p>Brüt İnşaat Alanı: <b>{brütInsaat.toFixed(2)} m²</b></p>
+            <p>Net İnşaat Alanı (Ortak Alan %10 çıkarıldı): <b>{netInsaat.toFixed(2)} m²</b></p>
+            <p>Konut Alanı: <b>{netKonutAlani.toFixed(2)} m²</b></p>
+            <p>Ticari Alanı: <b>{netTicariAlani.toFixed(2)} m²</b></p>
+            <p>Daire Sayısı (Ortalama {daireNetM2} m²): <b>{daireSayisi}</b></p>
+            <p>Maksimum Kat * Kat Başına Daire: <b>{maxDaireKatAdedi}</b></p>
+            <p>Otopark Gereksinimi (3 daire / 1 araç): <b>{otoparkAdedi} araç</b></p>
+            <p>Su Deposu Gerekliliği: <b>{sarnicGereklimi ? "Evet (30 daire üstü zorunlu)" : "Hayır"}</b></p>
+            <p>Ağaç Sayısı (Arsanın %10'u ağaç alanı): <b>{agacSayisi} adet</b></p>
+          </>
+        ) : (
+          <div style={{ color: "red" }}>
+            <h4>UYARI - Yönetmelik Uygun Değil!</h4>
+            <ul>
+              {uyumsuzluklar.map((u, i) => (
+                <li key={i}>{u}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+              }
