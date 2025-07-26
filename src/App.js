@@ -1,314 +1,375 @@
 import React, { useState } from "react";
 
+const ortakAlanOrani = 0.10;
+const maxKatYonetmelik = 5; // Örnek maksimum kat Hmax yönetmelikten alınacak şekilde
+const defaultCekmeMesafeleri = {
+  onBahce: 5,
+  yanBahce: 3,
+  arkaBahce: 4,
+};
+
 export default function App() {
+  // Girdiler
   const [arsaM2, setArsaM2] = useState("");
   const [taks, setTaks] = useState("");
   const [kaks, setKaks] = useState("");
-  const [cekmeOn, setCekmeOn] = useState("");
-  const [cekmeYan, setCekmeYan] = useState("");
-  const [cekmeArka, setCekmeArka] = useState("");
-  const [daire2M2, setDaire2M2] = useState("");
-  const [daire3M2, setDaire3M2] = useState("");
-  const [hmaxKat, setHmaxKat] = useState("");
-  const [ticariIstiyorum, setTicariIstiyorum] = useState(false);
+  const [yolCephe, setYolCephe] = useState("1");
+  const [ikiArtibirNetM2, setIkiArtibirNetM2] = useState("");
+  const [ucArtibirNetM2, setUcArtibirNetM2] = useState("");
+  const [katBasinaDaire, setKatBasinaDaire] = useState(4);
+  const [ticariAlanVar, setTicariAlanVar] = useState(false);
 
-  const [uyari, setUyari] = useState(null);
-  const [sonuc, setSonuc] = useState(null);
+  // Çekme mesafeleri (opsiyonel kullanıcı girişi veya default)
+  const [cekmeMesafeleri, setCekmeMesafeleri] = useState(defaultCekmeMesafeleri);
 
-  const toFloat = (val) => {
-    if (!val || val.trim() === "") return 0;
-    return parseFloat(val.replace(",", ".")) || 0;
-  };
+  // Sonuçlar
+  const [sonuclar, setSonuclar] = useState(null);
 
-  const toInt = (val) => {
-    if (!val || val.trim() === "") return 0;
-    return parseInt(val) || 0;
-  };
+  // Yönetmelik kontrolü fonksiyonu (basit örnek)
+  function yonetmelikKontrol(arsa, taksVal, kaksVal) {
+    const errors = [];
+    if (taksVal > 0.5) errors.push("TAKS 0.5'ten büyük olamaz (Madde X).");
+    if (kaksVal > 3) errors.push("KAKS 3'ten büyük olamaz (Madde Y).");
+    if (arsa < 100) errors.push("Arsa alanı 100 m²'den küçük olamaz (Madde Z).");
+    // Buraya gerçek maddeler eklenmeli
+    return errors;
+  }
 
+  // Hesaplama fonksiyonu
   const hesapla = () => {
-    setUyari(null);
-    setSonuc(null);
+    const arsa = parseFloat(arsaM2);
+    const taksVal = parseFloat(taks);
+    const kaksVal = parseFloat(kaks);
+    const ikiNet = parseFloat(ikiArtibirNetM2);
+    const ucNet = parseFloat(ucArtibirNetM2);
+    const katDaire = katBasinaDaire;
 
-    const arsa = toFloat(arsaM2);
-    const taksVal = toFloat(taks);
-    const kaksVal = toFloat(kaks);
-    const co = toFloat(cekmeOn);
-    const cy = toFloat(cekmeYan);
-    const ca = toFloat(cekmeArka);
-
-    if (arsa <= 0 || taksVal <= 0 || kaksVal <= 0) {
-      setUyari("Arsa, TAKS ve KAKS pozitif ve boş olmamalıdır.");
+    // Zorunlu alanları kontrol et
+    if (isNaN(arsa) || isNaN(taksVal) || isNaN(kaksVal)) {
+      alert("Lütfen Arsa, TAKS ve KAKS değerlerini doğru giriniz.");
       return;
     }
-    if (taksVal > 0.4) {
-      setUyari("TAKS 0.40'dan yüksek olamaz.");
-      return;
-    }
-    if (kaksVal > 1.6) {
-      setUyari("KAKS 1.60'dan yüksek olamaz.");
-      return;
-    }
-    if (co < 0 || cy < 0 || ca < 0) {
-      setUyari("Çekme mesafeleri negatif olamaz.");
+    if ((!ikiNet || ikiNet <= 0) && (!ucNet || ucNet <= 0) && !ticariAlanVar) {
+      alert("En az bir daire tipi seçilmeli veya ticari alan işaretlenmeli.");
       return;
     }
 
-    const arsaKenar = Math.sqrt(arsa);
-    const netArsa = Math.max(0, (arsaKenar - co - ca) * (arsaKenar - 2 * cy));
-    if (netArsa <= 0) {
-      setUyari("Çekme mesafeleri arsa alanını sıfırlıyor veya negatif yapıyor.");
+    // Yönetmelik kontrolü
+    const errors = yonetmelikKontrol(arsa, taksVal, kaksVal);
+    if (errors.length > 0) {
+      alert("Yönetmelik Hataları:\n" + errors.join("\n"));
       return;
     }
 
-    const d2M2Val = toFloat(daire2M2);
-    const d3M2Val = toFloat(daire3M2);
+    // Çekme mesafeleri nedeniyle net arsa alanı hesapla
+    const toplamCekme =
+      (cekmeMesafeleri.onBahce || 0) +
+      (cekmeMesafeleri.yanBahce || 0) * 2 +
+      (cekmeMesafeleri.arkaBahce || 0);
+    const netArsa = Math.max(arsa - toplamCekme * 10, 0); // Basit formül örneği
 
-    if (d2M2Val <= 0 && d3M2Val <= 0) {
-      setUyari("En az bir daire tipi için ortalama m² girin (2+1 veya 3+1).");
-      return;
-    }
-
-    const maxKat = toInt(hmaxKat);
-    if (maxKat <= 0) {
-      setUyari("Geçerli bir Hmax kat sayısı girin.");
-      return;
-    }
-
-    const katBasinaDaire = 4;
-    const maxDaireToplam = maxKat * katBasinaDaire;
-
+    // Brüt ve net inşaat alanları
     const brutInsaat = arsa * kaksVal;
-    const ortakAlanOrani = 0.10;
     const netInsaat = brutInsaat * (1 - ortakAlanOrani);
 
-    let ticariAlanM2 = 0;
-    let konutAlanM2 = netInsaat;
-    if (ticariIstiyorum) {
-      ticariAlanM2 = netInsaat * 0.2;
-      konutAlanM2 = netInsaat * 0.8;
+    // Ticari ve konut alanları
+    const netTicariAlani = ticariAlanVar ? netInsaat * 0.2 : 0;
+    const netKonutAlani = netInsaat - netTicariAlani;
+
+    // Daire adetleri
+    let ikiAdet = 0,
+      ucAdet = 0;
+    if (ikiNet > 0) ikiAdet = Math.floor((netKonutAlani * 0.5) / ikiNet);
+    if (ucNet > 0) ucAdet = Math.floor((netKonutAlani * 0.5) / ucNet);
+    const toplamDaire = ikiAdet + ucAdet;
+
+    // Otopark hesabı
+    const otoparkIhtiyaci = Math.ceil(toplamDaire / 3);
+    const suDeposuGereklilik = toplamDaire > 30 ? "10 tonluk su deposu gereklidir." : "";
+
+    // Ağaç hesabı
+    const agacIhtiyaci = arsa >= 500 ? "En az 2 ağaç dikimi gereklidir." : "";
+
+    // Sarnıç
+    const sarnicZorunlu = arsa >= 1000 ? "Sarnıç zorunludur." : "";
+
+    // Blok sayısı ve kat hesabı (max kat: maxKatYonetmelik)
+    let blokSayisi = 1;
+    if (parseInt(yolCephe) === 2) blokSayisi = 2;
+    else if (parseInt(yolCephe) >= 3) blokSayisi = 3;
+
+    let katSayisi = Math.ceil(toplamDaire / (katDaire * blokSayisi));
+    if (katSayisi > maxKatYonetmelik) {
+      // Kat sayısı fazla ise blok sayısını artır
+      while (katSayisi > maxKatYonetmelik) {
+        blokSayisi++;
+        katSayisi = Math.ceil(toplamDaire / (katDaire * blokSayisi));
+      }
     }
 
-    // Dairelerin ortalama m2 toplamı (ağırlıklı)
-    let toplamM2Agirlik = 0;
-    let toplamAgirlik = 0;
-    if (d2M2Val > 0) {
-      toplamM2Agirlik += d2M2Val;
-      toplamAgirlik++;
-    }
-    if (d3M2Val > 0) {
-      toplamM2Agirlik += d3M2Val;
-      toplamAgirlik++;
-    }
-    // Ortalama m² daire başı:
-    const ortalamaDaireM2 = toplamM2Agirlik / toplamAgirlik;
-
-    // Toplam daire sayısı:
-    let toplamDaire = Math.floor(konutAlanM2 / ortalamaDaireM2);
-    if (toplamDaire > maxDaireToplam) toplamDaire = maxDaireToplam;
-
-    // Daire tiplerini oranlayalım (örnek: %50 2+1, %50 3+1, 
-    // ama aslında m2 bilgisi varsa oran % ağırlık olabilir)
-    let oran2 = 0;
-    let oran3 = 0;
-    if (d2M2Val > 0 && d3M2Val > 0) {
-      const toplamM2 = d2M2Val + d3M2Val;
-      oran2 = d3M2Val / toplamM2; // ters oranda alıyoruz daire sayılarını
-      oran3 = d2M2Val / toplamM2;
-    } else if (d2M2Val > 0) {
-      oran2 = 1;
-    } else if (d3M2Val > 0) {
-      oran3 = 1;
-    }
-
-    // Dağılım:
-    const daire2Adet = Math.round(toplamDaire * oran2);
-    const daire3Adet = toplamDaire - daire2Adet;
-
-    const otoparkAdet = Math.ceil(toplamDaire / 3);
-    const suDeposuGerekli = toplamDaire > 30;
-
-    const planNotlari = [];
-    if (arsa >= 1000) planNotlari.push("Sarnıç kurulmalı (Arsa ≥ 1000 m²).");
-    if (otoparkAdet > 0) planNotlari.push(`Otopark ihtiyacı: ${otoparkAdet} araç.`);
-    if (suDeposuGerekli) planNotlari.push("30 daire üzeri 10 tonluk su deposu zorunlu.");
-    if (arsa >= 500) planNotlari.push("En az 2 ağaç dikimi gerekir.");
-    planNotlari.push("Yapı yaklaşma mesafeleri belediye takdirindedir.");
-
-    setSonuc({
+    setSonuclar({
       arsa,
-      netArsa: netArsa.toFixed(2),
-      brutInsaat: brutInsaat.toFixed(2),
-      netInsaat: netInsaat.toFixed(2),
+      taksVal,
+      kaksVal,
+      netArsa,
+      brutInsaat,
+      netInsaat,
+      netTicariAlani,
+      netKonutAlani,
+      ikiAdet,
+      ucAdet,
       toplamDaire,
-      daire2Adet,
-      daire3Adet,
-      maxKat,
-      otoparkAdet,
-      suDeposuGerekli,
-      ticariAlanM2: ticariAlanM2.toFixed(2),
-      konutAlanM2: konutAlanM2.toFixed(2),
-      planNotlari,
+      otoparkIhtiyaci,
+      suDeposuGereklilik,
+      agacIhtiyaci,
+      sarnicZorunlu,
+      blokSayisi,
+      katSayisi,
+      ticariAlanVar,
+      cekmeMesafeleri,
     });
   };
 
+  // Arayüz stilleri (temel)
+  const containerStyle = {
+    maxWidth: 500,
+    margin: "20px auto",
+    padding: 20,
+    backgroundColor: "#f0f4f8",
+    borderRadius: 12,
+    fontFamily: "'Poppins', sans-serif",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.1)",
+  };
+  const labelStyle = { display: "block", marginBottom: 6, fontWeight: "600", color: "#222" };
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    marginBottom: 14,
+    borderRadius: 8,
+    border: "1.5px solid #bbb",
+    fontSize: 16,
+  };
+  const checkboxStyle = { marginLeft: 8, transform: "scale(1.3)", cursor: "pointer" };
+  const btnStyle = {
+    width: "100%",
+    padding: "12px 0",
+    backgroundColor: "#0069d9",
+    color: "white",
+    fontSize: 18,
+    fontWeight: "600",
+    border: "none",
+    borderRadius: 10,
+    cursor: "pointer",
+    marginTop: 10,
+  };
+  const resultStyle = {
+    marginTop: 30,
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    boxShadow: "0 5px 15px rgba(0,0,0,0.1)",
+    color: "#111",
+    lineHeight: 1.5,
+  };
+  const errorStyle = { color: "red", marginBottom: 12, fontWeight: "700" };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-6 flex justify-center items-start">
-      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-3xl w-full">
-        <h1 className="text-4xl font-extrabold text-indigo-900 mb-8 text-center">
-          İmar Hesaplama Modülü
-        </h1>
+    <div style={containerStyle}>
+      <h2 style={{ textAlign: "center", marginBottom: 24 }}>İmar Hesaplama Modülü</h2>
 
-        <div className="grid grid-cols-2 gap-5">
-          <input
-            type="number"
-            placeholder="Arsa Alanı (m²) - Örn: 500"
-            className="input-style"
-            value={arsaM2}
-            onChange={(e) => setArsaM2(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="TAKS - Örn: 0.40"
-            className="input-style"
-            value={taks}
-            onChange={(e) => setTaks(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="KAKS - Örn: 1.60"
-            className="input-style"
-            value={kaks}
-            onChange={(e) => setKaks(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Çekme Ön (m) - Örn: 3"
-            className="input-style"
-            value={cekmeOn}
-            onChange={(e) => setCekmeOn(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Çekme Yan (m) - Örn: 3"
-            className="input-style"
-            value={cekmeYan}
-            onChange={(e) => setCekmeYan(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Çekme Arka (m) - Örn: 3"
-            className="input-style"
-            value={cekmeArka}
-            onChange={(e) => setCekmeArka(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="2+1 Ortalama Net M²"
-            className="input-style"
-            value={daire2M2}
-            onChange={(e) => setDaire2M2(e.target.value)}
-          />
-          <input
-            type="number"
-            step="0.01"
-            placeholder="3+1 Ortalama Net M²"
-            className="input-style"
-            value={daire3M2}
-            onChange={(e) => setDaire3M2(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="Hmax Kat Sayısı (max kat)"
-            className="input-style"
-            value={hmaxKat}
-            onChange={(e) => setHmaxKat(e.target.value)}
-          />
-          <div className="flex items-center space-x-2 ml-2">
-            <input
-              type="checkbox"
-              id="ticari-checkbox"
-              checked={ticariIstiyorum}
-              onChange={() => setTicariIstiyorum(!ticariIstiyorum)}
-              className="checkbox-style"
-            />
-            <label htmlFor="ticari-checkbox" className="text-gray-700 font-semibold">
-              Ticari alan ister misiniz?
-            </label>
-          </div>
-        </div>
+      <label style={labelStyle}>
+        Arsa Alanı (m²) <small>(Örnek: 500)</small>:
+        <input
+          type="number"
+          value={arsaM2}
+          onChange={(e) => setArsaM2(e.target.value)}
+          style={inputStyle}
+          placeholder="Arsa alanını girin"
+        />
+      </label>
 
-        {uyari && (
-          <div className="mt-6 p-4 bg-red-200 text-red-900 font-semibold rounded-md text-center">
-            {uyari}
-          </div>
-        )}
+      <label style={labelStyle}>
+        TAKS <small>(Örnek: 0.40)</small>:
+        <input
+          type="number"
+          step="0.01"
+          value={taks}
+          onChange={(e) => setTaks(e.target.value)}
+          style={inputStyle}
+          placeholder="TAKS değerini girin"
+        />
+      </label>
 
-        <button
-          onClick={hesapla}
-          className="mt-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition duration-300"
+      <label style={labelStyle}>
+        KAKS <small>(Örnek: 1.20)</small>:
+        <input
+          type="number"
+          step="0.01"
+          value={kaks}
+          onChange={(e) => setKaks(e.target.value)}
+          style={inputStyle}
+          placeholder="KAKS değerini girin"
+        />
+      </label>
+
+      <label style={labelStyle}>
+        Yola Cephe Sayısı:
+        <select
+          value={yolCephe}
+          onChange={(e) => setYolCephe(e.target.value)}
+          style={inputStyle}
         >
-          Hesapla
-        </button>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3+</option>
+        </select>
+      </label>
 
-        {sonuc && (
-          <div className="mt-8 bg-indigo-50 rounded-xl p-6 text-indigo-900">
-            <h2 className="text-2xl font-bold mb-4">Sonuçlar</h2>
-            <ul className="space-y-2 list-disc list-inside">
-              <li>Brüt İnşaat Alanı: {sonuc.brutInsaat} m²</li>
-              <li>Net Arsa Alanı (Çekme Mesafeleri sonrası): {sonuc.netArsa} m²</li>
-              <li>Net İnşaat Alanı (Ortak Alan %10 sonrası): {sonuc.netInsaat} m²</li>
-              <li>Toplam Daire Sayısı (max Hmax sınırı ile): {sonuc.toplamDaire}</li>
-              <li>2+1 Daire Adedi: {sonuc.daire2Adet}</li>
-              <li>3+1 Daire Adedi: {sonuc.daire3Adet}</li>
-              <li>Maksimum Kat Sayısı: {sonuc.maxKat}</li>
-              <li>Otopark Gereksinimi: {sonuc.otoparkAdet} araç</li>
-              <li>Su Deposu Gerekli mi?: {sonuc.suDeposuGerekli ? "Evet" : "Hayır"}</li>
-              {ticariIstiyorum && (
-                <>
-                  <li>Ticari Alan (Net İnşaatın %20'si): {sonuc.ticariAlanM2} m²</li>
-                  <li>Konut Alanı (Net İnşaatın %80'i): {sonuc.konutAlanM2} m²</li>
-                </>
-              )}
-            </ul>
+      <label style={labelStyle}>
+        2+1 Daire Ortalama Net M² <small>(0 ise hesaplamaya dahil edilmez)</small>:
+        <input
+          type="number"
+          value={ikiArtibirNetM2}
+          onChange={(e) => setIkiArtibirNetM2(e.target.value)}
+          style={inputStyle}
+          min={0}
+          placeholder="Örnek: 75"
+        />
+      </label>
 
-            <div className="mt-6">
-              <strong className="text-lg font-semibold">Plan Notları:</strong>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                {sonuc.planNotlari.map((not, i) => (
-                  <li key={i}>{not}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+      <label style={labelStyle}>
+        3+1 Daire Ortalama Net M² <small>(0 ise hesaplamaya dahil edilmez)</small>:
+        <input
+          type="number"
+          value={ucArtibirNetM2}
+          onChange={(e) => setUcArtibirNetM2(e.target.value)}
+          style={inputStyle}
+          min={0}
+          placeholder="Örnek: 110"
+        />
+      </label>
 
-        <style>{`
-          .input-style {
-            width: 100%;
-            padding: 12px 14px;
-            border-radius: 8px;
-            border: 1.8px solid #cbd5e1;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.2s ease;
+      <label style={labelStyle}>
+        Bir Katta Kaç Daire Olsun?:
+        <select
+          value={katBasinaDaire}
+          onChange={(e) => setKatBasinaDaire(Number(e.target.value))}
+          style={inputStyle}
+        >
+          {[2, 3, 4, 5].map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label style={{ ...labelStyle, display: "flex", alignItems: "center" }}>
+        Ticari Alan İstiyorum
+        <input
+          type="checkbox"
+          checked={ticariAlanVar}
+          onChange={() => setTicariAlanVar(!ticariAlanVar)}
+          style={checkboxStyle}
+        />
+      </label>
+
+      <h3 style={{ marginTop: 20, marginBottom: 12 }}>Çekme Mesafeleri (metre)</h3>
+
+      <label style={labelStyle}>
+        Ön Bahçe:
+        <input
+          type="number"
+          value={cekmeMesafeleri.onBahce}
+          onChange={(e) =>
+            setCekmeMesafeleri((prev) => ({ ...prev, onBahce: Number(e.target.value) }))
           }
-          .input-style:focus {
-            border-color: #5a67d8;
-            box-shadow: 0 0 0 3px rgba(90,103,216,0.3);
+          style={inputStyle}
+          min={0}
+        />
+      </label>
+
+      <label style={labelStyle}>
+        Yan Bahçe:
+        <input
+          type="number"
+          value={cekmeMesafeleri.yanBahce}
+          onChange={(e) =>
+            setCekmeMesafeleri((prev) => ({ ...prev, yanBahce: Number(e.target.value) }))
           }
-          .checkbox-style {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
+          style={inputStyle}
+          min={0}
+        />
+      </label>
+
+      <label style={labelStyle}>
+        Arka Bahçe:
+        <input
+          type="number"
+          value={cekmeMesafeleri.arkaBahce}
+          onChange={(e) =>
+            setCekmeMesafeleri((prev) => ({ ...prev, arkaBahce: Number(e.target.value) }))
           }
-        `}</style>
-      </div>
+          style={inputStyle}
+          min={0}
+        />
+      </label>
+
+      <button onClick={hesapla} style={btnStyle}>
+        Hesapla
+      </button>
+
+      {sonuclar && (
+        <div style={resultStyle}>
+          <h3>Sonuçlar</h3>
+          <p>
+            Arsa Alanı: <b>{sonuclar.arsa.toFixed(2)} m²</b>
+          </p>
+          <p>
+            Çekme Mesafeleri Sonrası Net Arsa Alanı: <b>{sonuclar.netArsa.toFixed(2)} m²</b>
+          </p>
+          <p>
+            TAKS: <b>{sonuclar.taksVal}</b>, KAKS: <b>{sonuclar.kaksVal}</b>
+          </p>
+          <p>
+            Toplam Brüt İnşaat Alanı: <b>{sonuclar.brutInsaat.toFixed(2)} m²</b>
+          </p>
+          <p>
+            Toplam Net İnşaat Alanı (Ortak Alan %10): <b>{sonuclar.netInsaat.toFixed(2)} m²</b>
+          </p>
+          <p>
+            Ticari Alan: <b>{sonuclar.netTicariAlani.toFixed(2)} m²</b>
+          </p>
+          <p>
+            Konut Alanı: <b>{sonuclar.netKonutAlani.toFixed(2)} m²</b>
+          </p>
+          <p>
+            2+1 Daire Sayısı: <b>{sonuclar.ikiAdet}</b>
+          </p>
+          <p>
+            3+1 Daire Sayısı: <b>{sonuclar.ucAdet}</b>
+          </p>
+          <p>
+            Toplam Daire Sayısı: <b>{sonuclar.toplamDaire}</b>
+          </p>
+          <p>
+            Blok Sayısı: <b>{sonuclar.blokSayisi}</b>
+          </p>
+          <p>
+            Kat Sayısı: <b>{sonuclar.katSayisi}</b>
+          </p>
+          <p>
+            Otopark İhtiyacı (Her 3 daire için 1 araç): <b>{sonuclar.otoparkIhtiyaci}</b>
+          </p>
+          <p>{sonuclar.suDeposuGereklilik}</p>
+          <p>{sonuclar.agacIhtiyaci}</p>
+          <p>{sonuclar.sarnicZorunlu}</p>
+          <hr style={{ margin: "20px 0" }} />
+          <p style={{ fontStyle: "italic", color: "#666" }}>
+            Çekme mesafeleri belediye takdirine bırakılmıştır. Tasarım temsili yerleşimdir.
+          </p>
+        </div>
+      )}
     </div>
   );
-              }
+            }
