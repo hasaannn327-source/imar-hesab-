@@ -1,90 +1,82 @@
-// ✅ Güncel App.js (eski koda yeni özellikler eklendi)
+import React, { useState } from "react";
 
-import React, { useState } from "react"; import jsPDF from "jspdf"; import html2canvas from "html2canvas";
+export default function App() { const [arsaM2, setArsaM2] = useState(0); const [taks, setTaks] = useState(0); const [kaks, setKaks] = useState(0); const [cekmeOn, setCekmeOn] = useState(0); const [cekmeYan, setCekmeYan] = useState(0); const [oda2Art1, setOda2Art1] = useState(80); const [oda3Art1, setOda3Art1] = useState(120); const [oran2Art1, setOran2Art1] = useState(50); const [planNotlariGoster, setPlanNotlariGoster] = useState(false); const [uygunluk, setUygunluk] = useState(null);
 
-export default function App() { const [arsaM2, setArsaM2] = useState(0); const [taks, setTaks] = useState(0); const [kaks, setKaks] = useState(0); const [cekmeOn, setCekmeOn] = useState(5); const [cekmeYan, setCekmeYan] = useState(5); const [cekmeArka, setCekmeArka] = useState(5); const [planNotlariniGoster, setPlanNotlariniGoster] = useState(false); const [uygunlukMesaji, setUygunlukMesaji] = useState("");
+const netParselAlani = arsaM2 - 2 * cekmeOn * Math.sqrt(arsaM2) - 2 * cekmeYan * Math.sqrt(arsaM2); const insaatAlani = kaks * netParselAlani; const netTicariAlani = insaatAlani * 0.2; const netKonutAlani = insaatAlani * 0.8;
 
-const netParselM2 = arsaM2 - (cekmeOn + cekmeArka) * Math.sqrt(arsaM2) - (2 * cekmeYan * Math.sqrt(arsaM2)); const insaatAlani = kaks * netParselM2; const ticariAlani = insaatAlani * 0.2; const konutAlani = insaatAlani * 0.8; const daireSayisi = Math.floor(konutAlani / 120); const otoparkIhtiyaci = Math.ceil(daireSayisi / 3); const suDeposuGerekli = daireSayisi > 30;
+const adet2Art1 = Math.round((netKonutAlani * (oran2Art1 / 100)) / oda2Art1); const adet3Art1 = Math.round((netKonutAlani * (1 - oran2Art1 / 100)) / oda3Art1); const toplamDaire = adet2Art1 + adet3Art1;
 
-const uygunlukKontrol = () => { let mesaj = ""; if (taks > 0.4) mesaj += "Taks değeri %40'ı geçemez. Madde: 19\n"; if (kaks > 2) mesaj += "Kaks değeri 2'yi geçemez. Madde: 20\n"; if (arsaM2 > 1000 && otoparkIhtiyaci === 0) mesaj += "1000 m² üzerindeki arsalar için otopark zorunludur. Madde: 57\n"; if (!cekmeOn || !cekmeYan || !cekmeArka) mesaj += "Çekme mesafeleri belirtilmemiş. Belediye belirler. Madde: 44\n"; setUygunlukMesaji(mesaj || "✅ Girdiğiniz tüm değerler yönetmeliğe uygundur."); };
+const otopark = Math.ceil(toplamDaire / 3); const suDeposu = toplamDaire > 30;
 
-return ( <div className="p-4 space-y-4 max-w-xl mx-auto"> <h1 className="text-xl font-bold">İmar Hesap Modülü</h1>
+const kontrolEt = () => { const hatalar = []; if (cekmeOn <= 0 || cekmeYan <= 0) hatalar.push("Çekme mesafeleri 0 olamaz. (Yönetmelik Madde 19)"); if (arsaM2 <= 0) hatalar.push("Arsa alanı girilmelidir. (Yönetmelik Madde 4)"); if (taks <= 0 || kaks <= 0) hatalar.push("TAKS/KAKS pozitif olmalıdır. (Yönetmelik Madde 5)");
 
-<div className="grid grid-cols-2 gap-2">
-    <input
-      type="number"
-      placeholder="Arsa m²"
-      onChange={(e) => setArsaM2(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="TAKS"
-      onChange={(e) => setTaks(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="KAKS"
-      onChange={(e) => setKaks(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="Ön Çekme (m)"
-      onChange={(e) => setCekmeOn(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="Yan Çekme (m)"
-      onChange={(e) => setCekmeYan(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="Arka Çekme (m)"
-      onChange={(e) => setCekmeArka(Number(e.target.value))}
-      className="border p-2"
-    />
+setUygunluk(hatalar.length > 0 ? hatalar : ["Girilen değerler yönetmeliğe uygundur."]);
+
+};
+
+return ( <div style={{ fontFamily: "sans-serif", padding: "2rem", background: "#f9f9f9", minHeight: "100vh" }}> <h1 style={{ textAlign: "center", color: "#2c3e50" }}>İmar Hesap Modülü</h1>
+
+<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginTop: "2rem" }}>
+    <input type="number" placeholder="Arsa m²" value={arsaM2} onChange={(e) => setArsaM2(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="TAKS" value={taks} onChange={(e) => setTaks(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="KAKS" value={kaks} onChange={(e) => setKaks(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="Ön çekme (m)" value={cekmeOn} onChange={(e) => setCekmeOn(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="Yan çekme (m)" value={cekmeYan} onChange={(e) => setCekmeYan(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="2+1 m²" value={oda2Art1} onChange={(e) => setOda2Art1(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="3+1 m²" value={oda3Art1} onChange={(e) => setOda3Art1(+e.target.value)} style={inputStyle} />
+    <input type="number" placeholder="2+1 oranı (%)" value={oran2Art1} onChange={(e) => setOran2Art1(+e.target.value)} style={inputStyle} />
   </div>
 
-  <button onClick={uygunlukKontrol} className="bg-blue-500 text-white px-4 py-2 rounded">
-    Yönetmelik Uygunluk Kontrolü Yap
-  </button>
+  <button onClick={kontrolEt} style={buttonStyle}>Yönetmelik Uygunluk Kontrolü Yap</button>
 
-  {uygunlukMesaji && (
-    <div className="bg-gray-100 p-3 rounded border border-gray-300 whitespace-pre-wrap">
-      {uygunlukMesaji}
+  {uygunluk && (
+    <div style={{ marginTop: "1rem", padding: "1rem", background: "#ecf0f1", borderRadius: "8px" }}>
+      <h3>Kontrol Sonucu</h3>
+      <ul>
+        {uygunluk.map((u, i) => (<li key={i}>{u}</li>))}
+      </ul>
     </div>
   )}
 
-  <div className="bg-green-100 p-3 rounded">
-    <p><strong>İnşaat Alanı:</strong> {insaatAlani.toFixed(2)} m²</p>
-    <p><strong>Ticari Alan:</strong> {ticariAlani.toFixed(2)} m² (%20)</p>
-    <p><strong>Konut Alanı:</strong> {konutAlani.toFixed(2)} m² (%80)</p>
-    <p><strong>Daire Sayısı (120m²):</strong> {daireSayisi}</p>
-    <p><strong>Otopark İhtiyacı:</strong> {otoparkIhtiyaci} araç</p>
-    {suDeposuGerekli && <p className="text-red-500">10 tonluk su deposu gerekli (30+ daire).</p>}
+  <div style={{ marginTop: "2rem" }}>
+    <h3>Hesaplanan Veriler</h3>
+    <ul>
+      <li>Net Parsel Alanı: {netParselAlani.toFixed(2)} m²</li>
+      <li>İnşaat Alanı: {insaatAlani.toFixed(2)} m²</li>
+      <li>Ticari Alan (%20): {netTicariAlani.toFixed(2)} m²</li>
+      <li>Konut Alanı (%80): {netKonutAlani.toFixed(2)} m²</li>
+      <li>2+1 Adet: {adet2Art1} daire</li>
+      <li>3+1 Adet: {adet3Art1} daire</li>
+      <li>Toplam Daire: {toplamDaire}</li>
+      <li>Otopark Gerekli: {otopark} araç</li>
+      {suDeposu && <li style={{ color: "red" }}>10 tonluk su deposu zorunlu!</li>}
+    </ul>
   </div>
 
-  <label className="flex items-center gap-2">
-    <input type="checkbox" onChange={(e) => setPlanNotlariniGoster(e.target.checked)} />
-    Plan Notlarını Göster
-  </label>
-
-  {planNotlariniGoster && (
-    <div className="bg-yellow-100 p-3 rounded">
-      <p>• TAKS/KAKS net parsel üzerinden hesaplanır.</p>
-      <p>• Otopark: 3 daireye 1 araç.</p>
-      <p>• Bodrum kat emsale dahildir.</p>
-      <p>• Zemin kat ticari olabilir (isteğe bağlı).</p>
-      <p>• 1000 m² üzeri parsellerde otopark zorunludur.</p>
-      <p>• Yapı yaklaşma mesafeleri: Belediye belirler.</p>
-    </div>
-  )}
+  <div style={{ marginTop: "2rem" }}>
+    <label>
+      <input type="checkbox" checked={planNotlariGoster} onChange={() => setPlanNotlariGoster(!planNotlariGoster)} /> Plan Notlarını Göster
+    </label>
+    {planNotlariGoster && (
+      <div style={{ background: "#fff", padding: "1rem", marginTop: "1rem", border: "1px solid #ccc", borderRadius: "8px" }}>
+        <h4>Plan Notları Özeti</h4>
+        <ul>
+          <li>TAKS/KAKS net parsel üzerinden hesaplanır.</li>
+          <li>Her 3 daireye 1 otopark zorunlu.</li>
+          <li>Bodrum kat emsale dahil.</li>
+          <li>Zemin kat ticari olabilir (isteğe bağlı).</li>
+          <li>1000 m² üzeri parsellerde otopark zorunludur.</li>
+          <li>Çekme mesafeleri belediye takdirindedir.</li>
+        </ul>
+      </div>
+    )}
+  </div>
 </div>
 
 ); }
 
-        
+const inputStyle = { padding: "10px", border: "1px solid #ccc", borderRadius: "6px", width: "100%", };
+
+const buttonStyle = { marginTop: "1rem", backgroundColor: "#2ecc71", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer", };
+
+    
