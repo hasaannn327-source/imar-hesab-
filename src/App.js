@@ -1,43 +1,16 @@
+// ✅ Güncel App.js (eski koda yeni özellikler eklendi)
+
 import React, { useState } from "react"; import jsPDF from "jspdf"; import html2canvas from "html2canvas";
 
-export default function App() { const [arsaM2, setArsaM2] = useState(0); const [taks, setTaks] = useState(0); const [kaks, setKaks] = useState(0); const [cekmeOn, setCekmeOn] = useState(0); const [cekmeYan, setCekmeYan] = useState(0); const [cekmeArka, setCekmeArka] = useState(0); const [toplamDaire, setToplamDaire] = useState(0); const [netInsaatAlani, setNetInsaatAlani] = useState(0); const [uygunlukMesaji, setUygunlukMesaji] = useState("");
+export default function App() { const [arsaM2, setArsaM2] = useState(0); const [taks, setTaks] = useState(0); const [kaks, setKaks] = useState(0); const [cekmeOn, setCekmeOn] = useState(5); const [cekmeYan, setCekmeYan] = useState(5); const [cekmeArka, setCekmeArka] = useState(5); const [planNotlariniGoster, setPlanNotlariniGoster] = useState(false); const [uygunlukMesaji, setUygunlukMesaji] = useState("");
 
-const kontrolEt = () => { let hatalar = [];
+const netParselM2 = arsaM2 - (cekmeOn + cekmeArka) * Math.sqrt(arsaM2) - (2 * cekmeYan * Math.sqrt(arsaM2)); const insaatAlani = kaks * netParselM2; const ticariAlani = insaatAlani * 0.2; const konutAlani = insaatAlani * 0.8; const daireSayisi = Math.floor(konutAlani / 120); const otoparkIhtiyaci = Math.ceil(daireSayisi / 3); const suDeposuGerekli = daireSayisi > 30;
 
-// TAKS KAKS sınırı kontrol
-if (taks > 0.40) hatalar.push("TAKS değeri maksimum %40 olabilir (Madde 19)");
-if (kaks > 2.50) hatalar.push("KAKS değeri maksimum 2.50 olabilir (Madde 19)");
+const uygunlukKontrol = () => { let mesaj = ""; if (taks > 0.4) mesaj += "Taks değeri %40'ı geçemez. Madde: 19\n"; if (kaks > 2) mesaj += "Kaks değeri 2'yi geçemez. Madde: 20\n"; if (arsaM2 > 1000 && otoparkIhtiyaci === 0) mesaj += "1000 m² üzerindeki arsalar için otopark zorunludur. Madde: 57\n"; if (!cekmeOn || !cekmeYan || !cekmeArka) mesaj += "Çekme mesafeleri belirtilmemiş. Belediye belirler. Madde: 44\n"; setUygunlukMesaji(mesaj || "✅ Girdiğiniz tüm değerler yönetmeliğe uygundur."); };
 
-// Çekme mesafesi kontrolü
-if (cekmeOn < 5) hatalar.push("Ön bahçe mesafesi minimum 5 m olmalıdır (Madde 19)");
-if (cekmeYan < 3) hatalar.push("Yan bahçe mesafesi minimum 3 m olmalıdır (Madde 19)");
-if (cekmeArka < 3) hatalar.push("Arka bahçe mesafesi minimum 3 m olmalıdır (Madde 19)");
+return ( <div className="p-4 space-y-4 max-w-xl mx-auto"> <h1 className="text-xl font-bold">İmar Hesap Modülü</h1>
 
-// Otopark kontrolü
-if (toplamDaire >= 1 && Math.ceil(toplamDaire / 3) < 1)
-  hatalar.push("Her 3 daireye 1 otopark gereklidir (Madde 34)");
-
-// Su deposu kontrolü
-if (toplamDaire > 30)
-  hatalar.push("30 daireyi aşıyorsa 10 tonluk su deposu zorunludur (Yönetmelik Eki)");
-
-// Ticari/Konut oranı kontrolü
-const netTicari = netInsaatAlani * 0.20;
-const netKonut = netInsaatAlani * 0.80;
-if (netTicari + netKonut !== netInsaatAlani)
-  hatalar.push("Ticari ve konut alanı toplamı inşaat alanını aşmamalı (Yönetmelik Madde 21)");
-
-if (hatalar.length > 0) {
-  setUygunlukMesaji("❌ Uygun değil:\n" + hatalar.join("\n"));
-} else {
-  setUygunlukMesaji("✅ Girdiğiniz değerler yönetmeliğe uygundur.");
-}
-
-};
-
-return ( <div className="p-6 max-w-xl mx-auto"> <h1 className="text-xl font-bold mb-4">İmar Yönetmeliği Kontrolü</h1>
-
-<div className="grid gap-3">
+<div className="grid grid-cols-2 gap-2">
     <input
       type="number"
       placeholder="Arsa m²"
@@ -46,57 +19,68 @@ return ( <div className="p-6 max-w-xl mx-auto"> <h1 className="text-xl font-bold
     />
     <input
       type="number"
-      placeholder="TAKS (örnek: 0.40)"
+      placeholder="TAKS"
       onChange={(e) => setTaks(Number(e.target.value))}
       className="border p-2"
     />
     <input
       type="number"
-      placeholder="KAKS (örnek: 2.00)"
+      placeholder="KAKS"
       onChange={(e) => setKaks(Number(e.target.value))}
       className="border p-2"
     />
     <input
       type="number"
-      placeholder="Ön çekme mesafesi (m)"
+      placeholder="Ön Çekme (m)"
       onChange={(e) => setCekmeOn(Number(e.target.value))}
       className="border p-2"
     />
     <input
       type="number"
-      placeholder="Yan çekme mesafesi (m)"
+      placeholder="Yan Çekme (m)"
       onChange={(e) => setCekmeYan(Number(e.target.value))}
       className="border p-2"
     />
     <input
       type="number"
-      placeholder="Arka çekme mesafesi (m)"
+      placeholder="Arka Çekme (m)"
       onChange={(e) => setCekmeArka(Number(e.target.value))}
       className="border p-2"
     />
-    <input
-      type="number"
-      placeholder="Toplam Daire Sayısı"
-      onChange={(e) => setToplamDaire(Number(e.target.value))}
-      className="border p-2"
-    />
-    <input
-      type="number"
-      placeholder="Toplam Net İnşaat Alanı (m²)"
-      onChange={(e) => setNetInsaatAlani(Number(e.target.value))}
-      className="border p-2"
-    />
-    <button
-      onClick={kontrolEt}
-      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-    >
-      Yönetmelik Uygunluk Kontrolü Yap
-    </button>
   </div>
 
+  <button onClick={uygunlukKontrol} className="bg-blue-500 text-white px-4 py-2 rounded">
+    Yönetmelik Uygunluk Kontrolü Yap
+  </button>
+
   {uygunlukMesaji && (
-    <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
-      <pre>{uygunlukMesaji}</pre>
+    <div className="bg-gray-100 p-3 rounded border border-gray-300 whitespace-pre-wrap">
+      {uygunlukMesaji}
+    </div>
+  )}
+
+  <div className="bg-green-100 p-3 rounded">
+    <p><strong>İnşaat Alanı:</strong> {insaatAlani.toFixed(2)} m²</p>
+    <p><strong>Ticari Alan:</strong> {ticariAlani.toFixed(2)} m² (%20)</p>
+    <p><strong>Konut Alanı:</strong> {konutAlani.toFixed(2)} m² (%80)</p>
+    <p><strong>Daire Sayısı (120m²):</strong> {daireSayisi}</p>
+    <p><strong>Otopark İhtiyacı:</strong> {otoparkIhtiyaci} araç</p>
+    {suDeposuGerekli && <p className="text-red-500">10 tonluk su deposu gerekli (30+ daire).</p>}
+  </div>
+
+  <label className="flex items-center gap-2">
+    <input type="checkbox" onChange={(e) => setPlanNotlariniGoster(e.target.checked)} />
+    Plan Notlarını Göster
+  </label>
+
+  {planNotlariniGoster && (
+    <div className="bg-yellow-100 p-3 rounded">
+      <p>• TAKS/KAKS net parsel üzerinden hesaplanır.</p>
+      <p>• Otopark: 3 daireye 1 araç.</p>
+      <p>• Bodrum kat emsale dahildir.</p>
+      <p>• Zemin kat ticari olabilir (isteğe bağlı).</p>
+      <p>• 1000 m² üzeri parsellerde otopark zorunludur.</p>
+      <p>• Yapı yaklaşma mesafeleri: Belediye belirler.</p>
     </div>
   )}
 </div>
