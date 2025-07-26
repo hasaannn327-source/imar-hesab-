@@ -12,6 +12,7 @@ export default function App() {
   const [kaks, setKaks] = useState("");
   const [daire2plus1m2, setDaire2plus1m2] = useState("85");
   const [daire3plus1m2, setDaire3plus1m2] = useState("120");
+  const [ticariIster, setTicariIster] = useState(true);
   const [planNotlariGoster, setPlanNotlariGoster] = useState(false);
 
   const [sehir, setSehir] = useState("İstanbul");
@@ -36,8 +37,11 @@ export default function App() {
     }
 
     const netInsaatAlani = parseFloat(kaks) * parseFloat(arsaM2);
-    const netTicariAlani = netInsaatAlani * 0.2;
-    const netKonutAlani = netInsaatAlani * 0.8;
+
+    const netTicariAlani = ticariIster ? netInsaatAlani * 0.2 : 0;
+    const netKonutAlani = ticariIster
+      ? netInsaatAlani * 0.8
+      : netInsaatAlani;
 
     let toplam2plus1 = 0;
     let toplam3plus1 = 0;
@@ -68,6 +72,7 @@ export default function App() {
       toplamDaire,
       otopark,
       suDeposu,
+      ticariIster,
     });
   };
 
@@ -140,6 +145,15 @@ export default function App() {
             onChange={(e) => setDaire3plus1m2(e.target.value)}
             style={inputStyle}
           />
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            checked={ticariIster}
+            onChange={() => setTicariIster(!ticariIster)}
+          />{" "}
+          Ticari alan istiyorum
         </label>
 
         <label>
