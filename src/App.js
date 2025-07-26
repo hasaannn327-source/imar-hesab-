@@ -1,4 +1,6 @@
 import React, { useState, useRef } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export default function App() {
   const [arsaM2, setArsaM2] = useState("");
@@ -16,14 +18,16 @@ export default function App() {
   const [ikiArtibirNetM2, setIkiArtibirNetM2] = useState(75);
   const [ucArtibirNetM2, setUcArtibirNetM2] = useState(110);
 
-  const ortakAlanOrani = 0.10;
+  const ortakAlanOrani = 0.1;
 
   const [katBasinaDaire, setKatBasinaDaire] = useState(4);
 
-  // BURAYA EKLENDİ
-  const [maxKat, setMaxKat] = useState(12); // default max kat sayısı
+  const [maxKat, setMaxKat] = useState(12);
 
   const planRef = useRef();
+
+  // Güncel toplamDaire ve toplamKat için state ekleyebiliriz ama
+  // burada hesapla sonrası hesaplanıyor ve UI'da direkt gösteriliyor
 
   const hesapla = () => {
     const arsa = parseFloat(arsaM2);
@@ -31,13 +35,21 @@ export default function App() {
     const kaksVal = parseFloat(kaks);
     const yol = parseInt(yolCephe);
 
-    if (isNaN(arsa) || isNaN(taksVal) || isNaN(kaksVal) || isNaN(yol)) {
-      alert("Lütfen tüm alanları doğru doldur!");
+    if (
+      isNaN(arsa) ||
+      isNaN(taksVal) ||
+      isNaN(kaksVal) ||
+      isNaN(yol) ||
+      arsa <= 0 ||
+      taksVal <= 0 ||
+      kaksVal <= 0
+    ) {
+      alert("Lütfen tüm alanları doğru ve pozitif şekilde doldurunuz!");
       return;
     }
 
-    const brütInsaat = arsa * kaksVal;
-    setToplamInsaat(brütInsaat);
+    const brutInsaat = arsa * kaksVal;
+    setToplamInsaat(brutInsaat);
 
     let blok;
     if (yol === 1) blok = 1;
@@ -46,14 +58,12 @@ export default function App() {
     else blok = 1;
     setBlokSayisi(blok);
 
-    const netInsaat = brütInsaat * (1 - ortakAlanOrani);
+    const netInsaat = brutInsaat * (1 - ortakAlanOrani);
     const netKonutAlani = netInsaat * 0.8;
     const netTicariAlani = netInsaat * 0.2;
 
     const daire2Adet =
-      ikiArtibirNetM2 > 0
-        ? Math.floor((netKonutAlani * 0.5) / ikiArtibirNetM2)
-        : 0;
+      ikiArtibirNetM2 > 0 ? Math.floor((netKonutAlani * 0.5) / ikiArtibirNetM2) : 0;
     const daire3Adet =
       ucArtibirNetM2 > 0 ? Math.floor((netKonutAlani * 0.5) / ucArtibirNetM2) : 0;
     const ticariAdet = Math.floor(netTicariAlani / 100);
@@ -67,68 +77,60 @@ export default function App() {
 
     if (gerekenKatSayisi > maxKat) {
       alert(
-        `UYARI: İhtiyaç duyulan kat sayısı (${gerekenKatSayisi}) izin verilen maksimum kat sayısını (${maxKat}) aşıyor.\n` +
-          `Lütfen kat başı daire sayısını, daire büyüklüğünü veya diğer parametreleri gözden geçirin.`
+        `UYARI: İhtiyaç duyulan kat sayısı (${gerekenKatSayisi}) maksimum izin verilen kat sayısını (${maxKat}) aşıyor. Lütfen parametreleri gözden geçirin.`
       );
-      // Burada istersen hesaplamayı durdurabilir veya devam ettirebilirsin.
-      // Ben burada durduruyorum:
       return;
     }
   };
 
   const pdfOlustur = () => {
     if (!planRef.current) return;
-    import("html2canvas").then((html2canvas) => {
-      import("jspdf").then(({ default: jsPDF }) => {
-        html2canvas.default(planRef.current).then((canvas) => {
-          const imgData = canvas.toDataURL("image/png");
-          const pdf = new jsPDF("p", "mm", "a4");
-          pdf.setFontSize(16);
-          pdf.text("İmar Hesaplama Raporu", 10, 20);
-          pdf.setFontSize(12);
-          pdf.text(`Arsa Alanı: ${arsaM2} m²`, 10, 30);
-          pdf.text(`TAKS: ${taks}`, 10, 40);
-          pdf.text(`KAKS: ${kaks}`, 10, 50);
-          pdf.text(`Yola Cephe Sayısı: ${yolCephe}`, 10, 60);
-          pdf.text(`Eğim Durumu: ${egimVar ? "Var" : "Yok"}`, 10, 70);
-          pdf.text(
-            `Toplam Brüt İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`,
-            10,
-            80
-          );
-          pdf.text(
-            `Toplam Net İnşaat Alanı (Ortak Alan %10): ${(
-              toplamInsaat *
-              (1 - ortakAlanOrani)
-            ).toFixed(2)} m²`,
-            10,
-            90
-          );
-          pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 100);
-          pdf.text(
-            `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama Net: ${ikiArtibirNetM2} m²)`,
-            10,
-            110
-          );
-          pdf.text(
-            `3+1 Daire Sayısı: ${ucArtibir} (Ortalama Net: ${ucArtibirNetM2} m²)`,
-            10,
-            120
-          );
-          pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 130);
-          pdf.text(`Kat Başına Daire Sayısı: ${katBasinaDaire}`, 10, 140);
-          const toplamDaire = ikiArtibir + ucArtibir;
-          const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
-          pdf.text(`Toplam Kat Sayısı (Tahmini): ${toplamKat}`, 10, 150);
 
-          pdf.addImage(imgData, "PNG", 10, 160, 180, 100);
-          pdf.save("imar_raporu.pdf");
-        });
-      });
+    html2canvas(planRef.current).then((canvas) => {
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      pdf.setFontSize(16);
+      pdf.text("İmar Hesaplama Raporu", 10, 20);
+      pdf.setFontSize(12);
+      pdf.text(`Arsa Alanı: ${arsaM2} m²`, 10, 30);
+      pdf.text(`TAKS: ${taks}`, 10, 40);
+      pdf.text(`KAKS: ${kaks}`, 10, 50);
+      pdf.text(`Yola Cephe Sayısı: ${yolCephe}`, 10, 60);
+      pdf.text(`Eğim Durumu: ${egimVar ? "Var" : "Yok"}`, 10, 70);
+      pdf.text(
+        `Toplam Brüt İnşaat Alanı: ${toplamInsaat.toFixed(2)} m²`,
+        10,
+        80
+      );
+      pdf.text(
+        `Toplam Net İnşaat Alanı (Ortak Alan %10): ${(
+          toplamInsaat *
+          (1 - ortakAlanOrani)
+        ).toFixed(2)} m²`,
+        10,
+        90
+      );
+      pdf.text(`Önerilen Blok Sayısı: ${blokSayisi}`, 10, 100);
+      pdf.text(
+        `2+1 Daire Sayısı: ${ikiArtibir} (Ortalama Net: ${ikiArtibirNetM2} m²)`,
+        10,
+        110
+      );
+      pdf.text(
+        `3+1 Daire Sayısı: ${ucArtibir} (Ortalama Net: ${ucArtibirNetM2} m²)`,
+        10,
+        120
+      );
+      pdf.text(`Tahmini Dükkan Sayısı: ${ticariBirim}`, 10, 130);
+      pdf.text(`Kat Başına Daire Sayısı: ${katBasinaDaire}`, 10, 140);
+      const toplamDaire = ikiArtibir + ucArtibir;
+      const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
+      pdf.text(`Toplam Kat Sayısı (Tahmini): ${toplamKat}`, 10, 150);
+
+      pdf.addImage(imgData, "PNG", 10, 160, 180, 100);
+      pdf.save("imar_raporu.pdf");
     });
   };
-
-  const blokSayisi = blokSayisi || 1;
 
   const toplamDaire = ikiArtibir + ucArtibir;
   const toplamKat = Math.ceil(toplamDaire / (katBasinaDaire * blokSayisi));
@@ -234,7 +236,9 @@ export default function App() {
         </select>
       </label>
 
-      <label style={labelStyle}>
+      <label
+        style={{ ...labelStyle, display: "flex", alignItems: "center" }}
+      >
         Eğim Var mı?
         <input
           type="checkbox"
@@ -282,7 +286,6 @@ export default function App() {
         </select>
       </label>
 
-      {/* Maks Kat Sayısı Girişi */}
       <label style={labelStyle}>
         Maksimum Kat Sayısı:
         <input
@@ -340,11 +343,11 @@ export default function App() {
           <b>
             {(
               (toplamInsaat * ortakAlanOrani) /
-              (ikiArtibir + ucArtibir + ticariBirim)
+              (ikiArtibir + ucArtibir + ticariBirim || 1) // bölme sıfıra karşı
             ).toFixed(2)}
           </b>
         </p>
       </div>
     </div>
   );
-}
+    }
