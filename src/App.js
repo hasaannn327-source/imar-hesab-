@@ -6,7 +6,7 @@ export default function App() {
   const [kaks, setKaks] = useState("");
   const [daire2plus1m2, setDaire2plus1m2] = useState("85");
   const [daire3plus1m2, setDaire3plus1m2] = useState("120");
-  const [oran2plus1, setOran2plus1] = useState("50"); // yüzde
+  const [oran2plus1, setOran2plus1] = useState("50");
   const [planNotlariGoster, setPlanNotlariGoster] = useState(false);
 
   const handleHesapla = () => {
@@ -26,7 +26,8 @@ export default function App() {
 
     const toplamDaire = toplam2plus1 + toplam3plus1;
     const otopark = Math.ceil(toplamDaire / 3);
-    const suDeposu = toplamDaire > 30 ? "10 tonluk su deposu gerekli" : "Gerekli değil";
+    const suDeposu =
+      toplamDaire > 30 ? "10 tonluk su deposu gerekli" : "Gerekli değil";
 
     alert(`
 Toplam İnşaat Alanı: ${netInsaatAlani.toFixed(2)} m²
@@ -43,67 +44,106 @@ Toplam İnşaat Alanı: ${netInsaatAlani.toFixed(2)} m²
   };
 
   return (
-    <div style={{ maxWidth: "600px", margin: "auto", padding: "20px", fontFamily: "sans-serif" }}>
-      <h2 style={{ marginBottom: "10px" }}>🏗️ İmar Hesap Modülü</h2>
+    <div
+      style={{
+        maxWidth: "600px",
+        margin: "auto",
+        padding: "20px",
+        fontFamily: "Arial, sans-serif",
+        backgroundColor: "#f5f5f5",
+        borderRadius: "10px",
+      }}
+    >
+      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
+        🏗️ İmar Hesap Modülü
+      </h2>
 
-      <label>Arsa Alanı (m²)</label>
-      <input
-        placeholder="Örn: 1000"
-        value={arsaM2}
-        onChange={(e) => setArsaM2(e.target.value)}
-        type="number"
-      />
-
-      <label>TAKS (örneğin 0.4)</label>
-      <input
-        placeholder="Örn: 0.4"
-        value={taks}
-        onChange={(e) => setTaks(e.target.value)}
-        type="number"
-        step="0.01"
-      />
-
-      <label>KAKS (örneğin 1.6)</label>
-      <input
-        placeholder="Örn: 1.6"
-        value={kaks}
-        onChange={(e) => setKaks(e.target.value)}
-        type="number"
-        step="0.1"
-      />
-
-      <label>2+1 Ortalama Daire Alanı (m²)</label>
-      <input
-        placeholder="Örn: 85"
-        value={daire2plus1m2}
-        onChange={(e) => setDaire2plus1m2(e.target.value)}
-        type="number"
-      />
-
-      <label>3+1 Ortalama Daire Alanı (m²)</label>
-      <input
-        placeholder="Örn: 120"
-        value={daire3plus1m2}
-        onChange={(e) => setDaire3plus1m2(e.target.value)}
-        type="number"
-      />
-
-      <label>2+1 Daire Oranı (%)</label>
-      <input
-        placeholder="Örn: 50"
-        value={oran2plus1}
-        onChange={(e) => setOran2plus1(e.target.value)}
-        type="number"
-        min="0"
-        max="100"
-      />
-
-      <button style={{ marginTop: "10px" }} onClick={handleHesapla}>
-        Hesapla
-      </button>
-
-      <div style={{ marginTop: "20px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <label>
+          Arsa Alanı (m²)
+          <input
+            type="number"
+            placeholder="Örn: 1000"
+            value={arsaM2}
+            onChange={(e) => setArsaM2(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+
+        <label>
+          TAKS (örn: 0.4)
+          <input
+            type="number"
+            placeholder="Örn: 0.4"
+            value={taks}
+            onChange={(e) => setTaks(e.target.value)}
+            step="0.01"
+            style={inputStyle}
+          />
+        </label>
+
+        <label>
+          KAKS (örn: 1.6)
+          <input
+            type="number"
+            placeholder="Örn: 1.6"
+            value={kaks}
+            onChange={(e) => setKaks(e.target.value)}
+            step="0.1"
+            style={inputStyle}
+          />
+        </label>
+
+        <label>
+          2+1 Ortalama Daire Alanı (m²)
+          <input
+            type="number"
+            placeholder="Örn: 85"
+            value={daire2plus1m2}
+            onChange={(e) => setDaire2plus1m2(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+
+        <label>
+          3+1 Ortalama Daire Alanı (m²)
+          <input
+            type="number"
+            placeholder="Örn: 120"
+            value={daire3plus1m2}
+            onChange={(e) => setDaire3plus1m2(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+
+        <label>
+          2+1 Daire Oranı (%)
+          <input
+            type="number"
+            placeholder="Örn: 50"
+            value={oran2plus1}
+            onChange={(e) => setOran2plus1(e.target.value)}
+            min="0"
+            max="100"
+            style={inputStyle}
+          />
+        </label>
+
+        <button
+          onClick={handleHesapla}
+          style={{
+            padding: "10px",
+            backgroundColor: "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          Hesapla
+        </button>
+
+        <label style={{ marginTop: "10px" }}>
           <input
             type="checkbox"
             checked={planNotlariGoster}
@@ -113,7 +153,15 @@ Toplam İnşaat Alanı: ${netInsaatAlani.toFixed(2)} m²
         </label>
 
         {planNotlariGoster && (
-          <div style={{ background: "#f3f4f6", padding: "15px", borderRadius: "8px", marginTop: "10px" }}>
+          <div
+            style={{
+              background: "#fff",
+              padding: "10px",
+              borderRadius: "8px",
+              marginTop: "10px",
+              boxShadow: "0 0 5px rgba(0,0,0,0.1)",
+            }}
+          >
             <b>📝 Plan Notları Özeti:</b>
             <ul>
               <li>TAKS/KAKS net parsel üzerinden hesaplanır.</li>
@@ -128,4 +176,13 @@ Toplam İnşaat Alanı: ${netInsaatAlani.toFixed(2)} m²
       </div>
     </div>
   );
-            }
+}
+
+const inputStyle = {
+  width: "100%",
+  padding: "8px",
+  marginTop: "4px",
+  borderRadius: "4px",
+  border: "1px solid #ccc",
+  boxSizing: "border-box",
+};
