@@ -1,16 +1,13 @@
 import React, { useState } from "react";
 
 export default function App() {
-  // State tanımları
   const [arsaM2, setArsaM2] = useState("");
   const [taks, setTaks] = useState("");
   const [kaks, setKaks] = useState("");
   const [cekmeOn, setCekmeOn] = useState("");
   const [cekmeYan, setCekmeYan] = useState("");
   const [cekmeArka, setCekmeArka] = useState("");
-  const [daire2Adet, setDaire2Adet] = useState("");
   const [daire2M2, setDaire2M2] = useState("");
-  const [daire3Adet, setDaire3Adet] = useState("");
   const [daire3M2, setDaire3M2] = useState("");
   const [hmaxKat, setHmaxKat] = useState("");
   const [ticariIstiyorum, setTicariIstiyorum] = useState(false);
@@ -18,11 +15,11 @@ export default function App() {
   const [uyari, setUyari] = useState(null);
   const [sonuc, setSonuc] = useState(null);
 
-  // Yardımcı fonksiyon: boş ve null kontrolü + sayıya çevirme
   const toFloat = (val) => {
     if (!val || val.trim() === "") return 0;
     return parseFloat(val.replace(",", ".")) || 0;
   };
+
   const toInt = (val) => {
     if (!val || val.trim() === "") return 0;
     return parseInt(val) || 0;
@@ -39,7 +36,6 @@ export default function App() {
     const cy = toFloat(cekmeYan);
     const ca = toFloat(cekmeArka);
 
-    // Kontroller
     if (arsa <= 0 || taksVal <= 0 || kaksVal <= 0) {
       setUyari("Arsa, TAKS ve KAKS pozitif ve boş olmamalıdır.");
       return;
@@ -57,7 +53,6 @@ export default function App() {
       return;
     }
 
-    // Arsa kenarı
     const arsaKenar = Math.sqrt(arsa);
     const netArsa = Math.max(0, (arsaKenar - co - ca) * (arsaKenar - 2 * cy));
     if (netArsa <= 0) {
@@ -65,20 +60,13 @@ export default function App() {
       return;
     }
 
-    // Daire sayıları ve m2
-    const d2Adet = toInt(daire2Adet);
-    const d2M2 = toFloat(daire2M2);
-    const d3Adet = toInt(daire3Adet);
-    const d3M2 = toFloat(daire3M2);
+    const d2M2Val = toFloat(daire2M2);
+    const d3M2Val = toFloat(daire3M2);
 
-    // En az bir daire tipi aktif olmalı
-    const aktifDaireSayisi = (d2M2 > 0 ? d2Adet : 0) + (d3M2 > 0 ? d3Adet : 0);
-    if (aktifDaireSayisi === 0) {
-      setUyari("En az bir daire tipi için adet ve m² girin.");
+    if (d2M2Val <= 0 && d3M2Val <= 0) {
+      setUyari("En az bir daire tipi için ortalama m² girin (2+1 veya 3+1).");
       return;
     }
-
-    const toplamDaireM2 = (d2M2 > 0 ? d2Adet * d2M2 : 0) + (d3M2 > 0 ? d3Adet * d3M2 : 0);
 
     const maxKat = toInt(hmaxKat);
     if (maxKat <= 0) {
@@ -87,16 +75,11 @@ export default function App() {
     }
 
     const katBasinaDaire = 4;
-    const maxDaireKatSiniri = maxKat * katBasinaDaire;
-
-    let toplamDaire = aktifDaireSayisi;
-    if (toplamDaire > maxDaireKatSiniri) {
-      setUyari(`Daire sayısı Hmax sınırını aşıyor! Maks: ${maxDaireKatSiniri} adet.`);
-      toplamDaire = maxDaireKatSiniri;
-    }
+    const maxDaireToplam = maxKat * katBasinaDaire;
 
     const brutInsaat = arsa * kaksVal;
-    const netInsaat = brutInsaat * 0.9;
+    const ortakAlanOrani = 0.10;
+    const netInsaat = brutInsaat * (1 - ortakAlanOrani);
 
     let ticariAlanM2 = 0;
     let konutAlanM2 = netInsaat;
@@ -104,6 +87,42 @@ export default function App() {
       ticariAlanM2 = netInsaat * 0.2;
       konutAlanM2 = netInsaat * 0.8;
     }
+
+    // Dairelerin ortalama m2 toplamı (ağırlıklı)
+    let toplamM2Agirlik = 0;
+    let toplamAgirlik = 0;
+    if (d2M2Val > 0) {
+      toplamM2Agirlik += d2M2Val;
+      toplamAgirlik++;
+    }
+    if (d3M2Val > 0) {
+      toplamM2Agirlik += d3M2Val;
+      toplamAgirlik++;
+    }
+    // Ortalama m² daire başı:
+    const ortalamaDaireM2 = toplamM2Agirlik / toplamAgirlik;
+
+    // Toplam daire sayısı:
+    let toplamDaire = Math.floor(konutAlanM2 / ortalamaDaireM2);
+    if (toplamDaire > maxDaireToplam) toplamDaire = maxDaireToplam;
+
+    // Daire tiplerini oranlayalım (örnek: %50 2+1, %50 3+1, 
+    // ama aslında m2 bilgisi varsa oran % ağırlık olabilir)
+    let oran2 = 0;
+    let oran3 = 0;
+    if (d2M2Val > 0 && d3M2Val > 0) {
+      const toplamM2 = d2M2Val + d3M2Val;
+      oran2 = d3M2Val / toplamM2; // ters oranda alıyoruz daire sayılarını
+      oran3 = d2M2Val / toplamM2;
+    } else if (d2M2Val > 0) {
+      oran2 = 1;
+    } else if (d3M2Val > 0) {
+      oran3 = 1;
+    }
+
+    // Dağılım:
+    const daire2Adet = Math.round(toplamDaire * oran2);
+    const daire3Adet = toplamDaire - daire2Adet;
 
     const otoparkAdet = Math.ceil(toplamDaire / 3);
     const suDeposuGerekli = toplamDaire > 30;
@@ -121,6 +140,8 @@ export default function App() {
       brutInsaat: brutInsaat.toFixed(2),
       netInsaat: netInsaat.toFixed(2),
       toplamDaire,
+      daire2Adet,
+      daire3Adet,
       maxKat,
       otoparkAdet,
       suDeposuGerekli,
@@ -187,25 +208,11 @@ export default function App() {
           />
           <input
             type="number"
-            placeholder="2+1 Daire Adedi"
-            className="input-style"
-            value={daire2Adet}
-            onChange={(e) => setDaire2Adet(e.target.value)}
-          />
-          <input
-            type="number"
             step="0.01"
             placeholder="2+1 Ortalama Net M²"
             className="input-style"
             value={daire2M2}
             onChange={(e) => setDaire2M2(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="3+1 Daire Adedi"
-            className="input-style"
-            value={daire3Adet}
-            onChange={(e) => setDaire3Adet(e.target.value)}
           />
           <input
             type="number"
@@ -257,6 +264,8 @@ export default function App() {
               <li>Net Arsa Alanı (Çekme Mesafeleri sonrası): {sonuc.netArsa} m²</li>
               <li>Net İnşaat Alanı (Ortak Alan %10 sonrası): {sonuc.netInsaat} m²</li>
               <li>Toplam Daire Sayısı (max Hmax sınırı ile): {sonuc.toplamDaire}</li>
+              <li>2+1 Daire Adedi: {sonuc.daire2Adet}</li>
+              <li>3+1 Daire Adedi: {sonuc.daire3Adet}</li>
               <li>Maksimum Kat Sayısı: {sonuc.maxKat}</li>
               <li>Otopark Gereksinimi: {sonuc.otoparkAdet} araç</li>
               <li>Su Deposu Gerekli mi?: {sonuc.suDeposuGerekli ? "Evet" : "Hayır"}</li>
@@ -302,4 +311,4 @@ export default function App() {
       </div>
     </div>
   );
-      }
+              }
