@@ -207,8 +207,8 @@ export default function App() {
 
   return (
     <div style={containerStyle}>
-      <h2 style={{ textAlign: "center", marginBottom: 28, color: "#0c5db0" }}>
-        İmar Hesaplama Modülü
+      <h2 style={{ textAlign: "center", marginBottom: 28, color: "#FF0000" }}>
+        İmar Hesaplama
       </h2>
 
       <label style={labelStyle}>
